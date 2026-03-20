@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import * as FileSystem from "expo-file-system";
 import {
   addDoc,
   collection,
@@ -61,6 +62,60 @@ const normalizeUserType = (role, userType = "student") =>
   role === "user" ? (userType === "faculty" ? "faculty" : "student") : null;
 const isPrimaryAdminSession = (profile) =>
   normalizeRole(profile?.role, profile?.email) === "admin";
+const AVATAR_CACHE_FILE =
+  FileSystem.documentDirectory || FileSystem.cacheDirectory
+    ? `${FileSystem.documentDirectory || FileSystem.cacheDirectory}avatar-cache.json`
+    : "";
+
+const readAvatarCacheMap = async () => {
+  if (!AVATAR_CACHE_FILE) return {};
+  try {
+    const info = await FileSystem.getInfoAsync(AVATAR_CACHE_FILE);
+    if (!info.exists) return {};
+    const raw = await FileSystem.readAsStringAsync(AVATAR_CACHE_FILE);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+};
+
+const writeAvatarCacheMap = async (cache = {}) => {
+  if (!AVATAR_CACHE_FILE) return false;
+  try {
+    await FileSystem.writeAsStringAsync(AVATAR_CACHE_FILE, JSON.stringify(cache));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const cacheAvatarUrlForUser = async (userId = "", avatarUrl = "") => {
+  if (!userId || !avatarUrl) return false;
+  const cache = await readAvatarCacheMap();
+  cache[userId] = avatarUrl;
+  return writeAvatarCacheMap(cache);
+};
+
+const resolveCachedAvatarForUser = async (userId = "") => {
+  if (!userId) return "";
+  const cache = await readAvatarCacheMap();
+  const value = typeof cache[userId] === "string" ? cache[userId] : "";
+  if (!value) return "";
+  if (!/^file:\/\//i.test(value)) return value;
+
+  try {
+    const info = await FileSystem.getInfoAsync(value);
+    if (info.exists) return value;
+    delete cache[userId];
+    await writeAvatarCacheMap(cache);
+  } catch {
+    // Ignore cache validation failures; fallback to default avatar behavior.
+  }
+  return "";
+};
 
 const toDateValue = (value) => {
   if (!value) return null;
@@ -138,6 +193,25 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     viewedArticleLocksRef.current = new Set();
+  }, [user?.id]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!user?.id) return undefined;
+
+    resolveCachedAvatarForUser(user.id).then((cachedAvatarUrl) => {
+      if (!mounted || !cachedAvatarUrl) return;
+      setUser((prev) => {
+        if (!prev || prev.id !== user.id) return prev;
+        if (prev.avatarUrl === cachedAvatarUrl) return prev;
+        if (prev.avatarUrl && /^https?:\/\//i.test(prev.avatarUrl)) return prev;
+        return { ...prev, avatarUrl: cachedAvatarUrl };
+      });
+    });
+
+    return () => {
+      mounted = false;
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -365,21 +439,26 @@ export const AppProvider = ({ children }) => {
     const role = normalizeRole(profile?.role || "user", email);
     const base = USERS[role] || USERS.user;
     const resolvedName = profile?.name || base.name;
+    const resolvedUserId = profile?.uid || profile?.id || base.id;
+    const nextAvatarUrl = profile?.avatarUrl || "";
     setUser({
       ...base,
       ...profile,
-      id: profile?.uid || profile?.id || base.id,
+      id: resolvedUserId,
       name: resolvedName,
       email: profile?.email || base.email,
       role,
       avatar: profile?.avatar || getInitials(resolvedName),
-      avatarUrl: profile?.avatarUrl || "",
+      avatarUrl: nextAvatarUrl,
       userType: normalizeUserType(role, profile?.userType || "student"),
       dept: role === "admin" ? PRIMARY_ADMIN.dept : profile?.dept || base.dept,
       year: role === "user" ? profile?.year || base.year || null : null,
       usn: role === "user" ? profile?.usn || base.usn || null : null,
       readNotificationIds: normalizeReadNotificationIds(profile?.readNotificationIds),
     });
+    if (nextAvatarUrl) {
+      cacheAvatarUrlForUser(resolvedUserId, nextAvatarUrl);
+    }
   };
 
   const authenticate = async ({
@@ -510,13 +589,19 @@ export const AppProvider = ({ children }) => {
       const userSnap = await getDoc(userRef);
 
       if (adminLoginAttempt) {
+        const existingAdminData = userSnap.data() || {};
+        const existingAvatarUrl = typeof existingAdminData.avatarUrl === "string" ? existingAdminData.avatarUrl : "";
+        const existingAvatar =
+          typeof existingAdminData.avatar === "string" && existingAdminData.avatar.trim()
+            ? existingAdminData.avatar
+            : getInitials(PRIMARY_ADMIN.name);
         const adminProfile = {
           role: "admin",
           userType: null,
           name: PRIMARY_ADMIN.name,
           email: PRIMARY_ADMIN.email,
-          avatar: getInitials(PRIMARY_ADMIN.name),
-          avatarUrl: "",
+          avatar: existingAvatar,
+          avatarUrl: existingAvatarUrl,
           dept: PRIMARY_ADMIN.dept,
           year: null,
           usn: null,
@@ -811,6 +896,7 @@ export const AppProvider = ({ children }) => {
         pathPrefix: `posts/${user.id}`,
         fileName: `${Date.now()}-${user.id}.jpg`,
       });
+      if (!coverImage) coverImage = data.coverImageUri;
     }
 
     const payload = {
@@ -1148,21 +1234,24 @@ export const AppProvider = ({ children }) => {
 
   const updateAvatar = async (avatarUri) => {
     if (!user?.id || !avatarUri) return false;
-    const avatarUrl = await uploadImageAsync({
+    let avatarUrl = await uploadImageAsync({
       uri: avatarUri,
       pathPrefix: `avatars/${user.id}`,
       fileName: `${Date.now()}-${user.id}.jpg`,
     });
+    if (!avatarUrl) avatarUrl = avatarUri;
     if (!avatarUrl) return false;
 
+    const cachedLocally = await cacheAvatarUrlForUser(user.id, avatarUrl);
     setUser((prev) => (prev ? { ...prev, avatarUrl } : prev));
+    setUsers((prev) => prev.map((item) => (item.id === user.id ? { ...item, avatarUrl } : item)));
     if (!useFirebaseBackend) return true;
     try {
       await setDoc(doc(db, "users", user.id), { avatarUrl, updatedAt: serverTimestamp() }, { merge: true });
       return true;
     } catch (error) {
       console.error("Failed to save avatar:", error);
-      return false;
+      return cachedLocally;
     }
   };
 

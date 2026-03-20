@@ -1,6 +1,7 @@
 export default ({ config }) => ({
   ...config,
   name: "BMSCE Buzz",
+  owner: "darshan18",
   slug: "bmsce-buzz",
   version: "1.0.0",
   orientation: "portrait",
@@ -38,5 +39,8 @@ export default ({ config }) => ({
     REACT_APP_FIREBASE_APP_ID: process.env.REACT_APP_FIREBASE_APP_ID || "",
     REACT_APP_FIREBASE_VAPID_KEY: process.env.REACT_APP_FIREBASE_VAPID_KEY || "",
     REACT_APP_ENABLE_NATIVE_PUSH: process.env.REACT_APP_ENABLE_NATIVE_PUSH || "false",
+    eas: {
+      projectId: "884a51e1-32de-4ff9-b940-4c5258cdb41f",
+    },
   },
 });

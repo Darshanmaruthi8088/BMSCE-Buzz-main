@@ -88,9 +88,24 @@ const getBlobFromUri = async (uri) => {
   return blobFromXhr(uri);
 };
 
+const persistLocalImageUri = async (uri, sourceName = "") => {
+  if (!uri || !/^(file|content):\/\//i.test(uri)) return uri || "";
+  try {
+    const ext = getImageExtension(sourceName || uri);
+    const baseDir = `${FileSystem.documentDirectory || FileSystem.cacheDirectory || ""}local-media`;
+    if (!baseDir) return uri;
+    await FileSystem.makeDirectoryAsync(baseDir, { intermediates: true });
+    const target = `${baseDir}/${Date.now()}-${Math.round(Math.random() * 1_000_000)}.${ext}`;
+    await FileSystem.copyAsync({ from: uri, to: target });
+    return target;
+  } catch {
+    return uri;
+  }
+};
+
 export const uploadImageAsync = async ({ uri, pathPrefix = "uploads", fileName = "" } = {}) => {
   if (!uri) return "";
-  if (!storage) return uri;
+  if (!storage) return persistLocalImageUri(uri, fileName || uri);
   if (/^https?:\/\//i.test(uri)) return uri;
 
   const ext = getImageExtension(fileName || uri);
@@ -117,7 +132,9 @@ export const uploadImageAsync = async ({ uri, pathPrefix = "uploads", fileName =
       const code = fallbackError?.code || error?.code || "unknown";
       const message = fallbackError?.message || error?.message || "Image upload failed.";
       console.warn(`Image upload failed (${code}): ${message}`);
-      if (/^(file|content):\/\//i.test(uri)) return "";
+      if (/^(file|content):\/\//i.test(uri)) {
+        return persistLocalImageUri(uri, fileName || uri);
+      }
       return uri;
     }
   }

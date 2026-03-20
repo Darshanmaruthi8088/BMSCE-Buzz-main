@@ -213,9 +213,18 @@ const ProfileScreen = () => {
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.analyticsPostTitle, { color: theme.text }]}>{item.title}</Text>
                     <View style={styles.analyticsMetaRow}>
-                      <Text style={[styles.analyticsMeta, { color: theme.text2 }]}>?? {item.views || 0}</Text>
-                      <Text style={[styles.analyticsMeta, { color: "#EF4444" }]}>? {item.likes || 0}</Text>
-                      <Text style={[styles.analyticsMeta, { color: "#3B82F6" }]}>?? {item.comments || 0}</Text>
+                      <View style={styles.analyticsMetaItem}>
+                        <Ionicons name="eye-outline" size={12} color={theme.text2} />
+                        <Text style={[styles.analyticsMeta, { color: theme.text2 }]}>{item.views || 0}</Text>
+                      </View>
+                      <View style={styles.analyticsMetaItem}>
+                        <Ionicons name="heart-outline" size={12} color="#EF4444" />
+                        <Text style={[styles.analyticsMeta, { color: "#EF4444" }]}>{item.likes || 0}</Text>
+                      </View>
+                      <View style={styles.analyticsMetaItem}>
+                        <Ionicons name="chatbubble-outline" size={12} color="#3B82F6" />
+                        <Text style={[styles.analyticsMeta, { color: "#3B82F6" }]}>{item.comments || 0}</Text>
+                      </View>
                     </View>
                   </View>
                   <Pressable onPress={() => openArticle(item)}>
@@ -467,6 +476,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 9,
     alignItems: "center",
+  },
+  analyticsMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   analyticsMeta: {
     fontSize: 11,
