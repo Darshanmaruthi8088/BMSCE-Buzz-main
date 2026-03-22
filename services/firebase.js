@@ -67,6 +67,25 @@ const getContentType = (extension = "", blobType = "") =>
     ? blobType
     : IMAGE_CONTENT_TYPES[extension] || "image/jpeg";
 
+const isHttpUri = (value = "") => /^https?:\/\//i.test(String(value || ""));
+const isFirebaseStorageUri = (value = "") => /^gs:\/\//i.test(String(value || ""));
+const hasUriScheme = (value = "") => /^[a-z][a-z0-9+.-]*:/i.test(String(value || ""));
+
+const getLocalMediaBaseDir = () =>
+  `${FileSystem.documentDirectory || FileSystem.cacheDirectory || ""}local-media`;
+
+const isPersistedLocalMediaUri = (value = "") => {
+  const baseDir = getLocalMediaBaseDir();
+  if (!baseDir) return false;
+  return /^file:\/\//i.test(String(value || "")) && String(value || "").startsWith(`${baseDir}/`);
+};
+
+const isLikelyLocalMediaUri = (value = "") => {
+  if (!value || !hasUriScheme(value)) return false;
+  if (isHttpUri(value) || isFirebaseStorageUri(value)) return false;
+  return true;
+};
+
 const blobFromXhr = (uri) =>
   new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -88,40 +107,101 @@ const getBlobFromUri = async (uri) => {
   return blobFromXhr(uri);
 };
 
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to convert image blob to base64."));
+    reader.onloadend = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      const base64 = result.includes(",") ? result.split(",").pop() : "";
+      if (!base64) {
+        reject(new Error("Image blob conversion produced empty data."));
+        return;
+      }
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+
 const persistLocalImageUri = async (uri, sourceName = "") => {
-  if (!uri || !/^(file|content):\/\//i.test(uri)) return uri || "";
+  if (!uri || !isLikelyLocalMediaUri(uri)) return uri || "";
+  const baseDir = getLocalMediaBaseDir();
+  if (!baseDir) return uri;
+  if (isPersistedLocalMediaUri(uri)) return uri;
+
+  const ext = getImageExtension(sourceName || uri);
+  const target = `${baseDir}/${Date.now()}-${Math.round(Math.random() * 1_000_000)}.${ext}`;
+
   try {
-    const ext = getImageExtension(sourceName || uri);
-    const baseDir = `${FileSystem.documentDirectory || FileSystem.cacheDirectory || ""}local-media`;
-    if (!baseDir) return uri;
     await FileSystem.makeDirectoryAsync(baseDir, { intermediates: true });
-    const target = `${baseDir}/${Date.now()}-${Math.round(Math.random() * 1_000_000)}.${ext}`;
-    await FileSystem.copyAsync({ from: uri, to: target });
-    return target;
   } catch {
     return uri;
   }
+
+  try {
+    await FileSystem.copyAsync({ from: uri, to: target });
+    return target;
+  } catch {
+    // Fall through to Base64 backup if direct copy from URI fails.
+  }
+
+  try {
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    if (!base64) throw new Error("Image file is empty.");
+    await FileSystem.writeAsStringAsync(target, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return target;
+  } catch {
+    // Fall through to blob conversion for platform URIs like ph://.
+  }
+
+  try {
+    const blob = await getBlobFromUri(uri);
+    const base64 = await blobToBase64(blob);
+    await FileSystem.writeAsStringAsync(target, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    if (typeof blob?.close === "function") blob.close();
+    return target;
+  } catch {
+    // Could not persist as a stable local file.
+  }
+  return uri;
 };
 
-export const uploadImageAsync = async ({ uri, pathPrefix = "uploads", fileName = "" } = {}) => {
+export const uploadImageAsync = async ({
+  uri,
+  pathPrefix = "uploads",
+  fileName = "",
+  allowLocalFallback = true,
+} = {}) => {
   if (!uri) return "";
-  if (!storage) return persistLocalImageUri(uri, fileName || uri);
-  if (/^https?:\/\//i.test(uri)) return uri;
+  if (isHttpUri(uri)) return uri;
+  if (isFirebaseStorageUri(uri)) return uri;
 
-  const ext = getImageExtension(fileName || uri);
+  const persistedSourceUri = await persistLocalImageUri(uri, fileName || uri);
+  const sourceUri = persistedSourceUri || uri;
+  const localFallbackUri = isPersistedLocalMediaUri(sourceUri) ? sourceUri : "";
+
+  if (!storage) return allowLocalFallback ? localFallbackUri : "";
+
+  const ext = getImageExtension(fileName || sourceUri || uri);
   const finalName = fileName || `${Date.now()}.${ext}`;
   const cleanName = finalName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const storageRef = ref(storage, `${pathPrefix}/${cleanName}`);
 
   try {
-    const blob = await getBlobFromUri(uri);
+    const blob = await getBlobFromUri(sourceUri);
     const contentType = getContentType(ext, blob?.type || "");
     await uploadBytes(storageRef, blob, { contentType });
     if (typeof blob?.close === "function") blob.close();
     return await getDownloadURL(storageRef);
   } catch (error) {
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
+      const base64 = await FileSystem.readAsStringAsync(sourceUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
       if (!base64) throw new Error("Image file is empty.");
@@ -132,10 +212,8 @@ export const uploadImageAsync = async ({ uri, pathPrefix = "uploads", fileName =
       const code = fallbackError?.code || error?.code || "unknown";
       const message = fallbackError?.message || error?.message || "Image upload failed.";
       console.warn(`Image upload failed (${code}): ${message}`);
-      if (/^(file|content):\/\//i.test(uri)) {
-        return persistLocalImageUri(uri, fileName || uri);
-      }
-      return uri;
+      if (allowLocalFallback && localFallbackUri) return localFallbackUri;
+      return "";
     }
   }
 };

@@ -126,13 +126,16 @@ const ComposeScreen = () => {
         .filter(Boolean),
       priority,
       coverImageUri,
+      coverImageName,
       startDateTime: startDateTime.toISOString(),
       endDateTime: endDateTime.toISOString(),
     });
 
     if (ok) {
       navigation.goBack();
+      return;
     }
+    Alert.alert("Publish failed", "Image upload failed. Please check your connection and try again.");
   };
 
   const pickCoverImage = async () => {

@@ -99,7 +99,10 @@ const ProfileScreen = () => {
     const asset = result.assets?.[0];
     if (!asset?.uri) return;
 
-    const ok = await updateAvatar(asset.uri);
+    const ok = await updateAvatar(
+      asset.uri,
+      asset.fileName || asset.uri.split("/").pop() || `${Date.now()}-avatar.jpg`
+    );
     if (!ok) {
       Alert.alert("Avatar update failed", "Could not save avatar. Please try again.");
     }

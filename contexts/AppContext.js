@@ -117,6 +117,15 @@ const resolveCachedAvatarForUser = async (userId = "") => {
   return "";
 };
 
+const isHttpImageUri = (value = "") => /^https?:\/\//i.test(String(value || ""));
+const isFirebaseStorageUri = (value = "") => /^gs:\/\//i.test(String(value || ""));
+const isNonRemoteImageUri = (value = "") => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return false;
+  if (isHttpImageUri(trimmed) || isFirebaseStorageUri(trimmed)) return false;
+  return /^[a-z][a-z0-9+.-]*:/i.test(trimmed);
+};
+
 const toDateValue = (value) => {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
@@ -188,6 +197,8 @@ export const AppProvider = ({ children }) => {
   const [notifs, setNotifs] = useState(LOCAL_NOTIFS);
   const [users, setUsers] = useState([]);
   const viewedArticleLocksRef = useRef(new Set());
+  const repairedAvatarUrisRef = useRef(new Set());
+  const repairedPostImageUrisRef = useRef(new Set());
 
   const isAdmin = isPrimaryAdminSession(user);
 
@@ -213,6 +224,90 @@ export const AppProvider = ({ children }) => {
       mounted = false;
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!useFirebaseBackend || !db || !user?.id || !isNonRemoteImageUri(user?.avatarUrl)) {
+      return undefined;
+    }
+
+    const repairKey = `${user.id}:${user.avatarUrl}`;
+    if (repairedAvatarUrisRef.current.has(repairKey)) return undefined;
+    repairedAvatarUrisRef.current.add(repairKey);
+
+    let cancelled = false;
+    const repairAvatar = async () => {
+      try {
+        const repairedUrl = await uploadImageAsync({
+          uri: user.avatarUrl,
+          pathPrefix: `avatars/${user.id}`,
+          fileName: `${Date.now()}-${user.id}.jpg`,
+          allowLocalFallback: false,
+        });
+        if (!repairedUrl || cancelled || repairedUrl === user.avatarUrl) return;
+
+        await setDoc(doc(db, "users", user.id), { avatarUrl: repairedUrl, updatedAt: serverTimestamp() }, { merge: true });
+        if (cancelled) return;
+
+        cacheAvatarUrlForUser(user.id, repairedUrl);
+        setUser((prev) => (prev && prev.id === user.id ? { ...prev, avatarUrl: repairedUrl } : prev));
+        setUsers((prev) => prev.map((item) => (item.id === user.id ? { ...item, avatarUrl: repairedUrl } : item)));
+      } catch (error) {
+        console.error("Failed to repair avatar image URL:", error);
+      }
+    };
+
+    repairAvatar();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, user?.avatarUrl]);
+
+  useEffect(() => {
+    if (!useFirebaseBackend || !db || !user?.id || !Array.isArray(news) || !news.length) {
+      return undefined;
+    }
+
+    const ownPostsWithLocalUris = news.filter(
+      (item) =>
+        item?.id &&
+        item.authorId === user.id &&
+        typeof item.coverImage === "string" &&
+        isNonRemoteImageUri(item.coverImage)
+    );
+    if (!ownPostsWithLocalUris.length) return undefined;
+
+    let cancelled = false;
+    const repairPostImages = async () => {
+      for (const post of ownPostsWithLocalUris) {
+        if (cancelled) return;
+        const repairKey = `${post.id}:${post.coverImage}`;
+        if (repairedPostImageUrisRef.current.has(repairKey)) continue;
+        repairedPostImageUrisRef.current.add(repairKey);
+
+        try {
+          const repairedUrl = await uploadImageAsync({
+            uri: post.coverImage,
+            pathPrefix: `posts/${user.id}`,
+            fileName: `${Date.now()}-${post.id}.jpg`,
+            allowLocalFallback: false,
+          });
+          if (!repairedUrl || repairedUrl === post.coverImage || cancelled) continue;
+
+          await updateDoc(doc(db, "news", post.id), {
+            coverImage: repairedUrl,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (error) {
+          console.error(`Failed to repair cover image for post ${post.id}:`, error);
+        }
+      }
+    };
+
+    repairPostImages();
+    return () => {
+      cancelled = true;
+    };
+  }, [news, user?.id]);
 
   useEffect(() => {
     if (!useFirebaseBackend) return undefined;
@@ -882,6 +977,10 @@ export const AppProvider = ({ children }) => {
     if (!user) return false;
     const isUserPost = user.role === "user";
     let coverImage = typeof data?.coverImage === "string" ? data.coverImage : "";
+    const coverImageName =
+      typeof data?.coverImageName === "string" && data.coverImageName.trim()
+        ? data.coverImageName.trim()
+        : `${Date.now()}-${user.id}.jpg`;
     const parsedStartDateTime = toDateValue(data?.startDateTime) || new Date();
     let parsedEndDateTime = toDateValue(data?.endDateTime);
     if (!parsedEndDateTime || parsedEndDateTime <= parsedStartDateTime) {
@@ -894,9 +993,10 @@ export const AppProvider = ({ children }) => {
       coverImage = await uploadImageAsync({
         uri: data.coverImageUri,
         pathPrefix: `posts/${user.id}`,
-        fileName: `${Date.now()}-${user.id}.jpg`,
+        fileName: coverImageName,
+        allowLocalFallback: !useFirebaseBackend,
       });
-      if (!coverImage) coverImage = data.coverImageUri;
+      if (!coverImage) return false;
     }
 
     const payload = {
@@ -924,6 +1024,7 @@ export const AppProvider = ({ children }) => {
     };
 
     delete payload.coverImageUri;
+    delete payload.coverImageName;
 
     if (useFirebaseBackend) {
       try {
@@ -1232,14 +1333,18 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const updateAvatar = async (avatarUri) => {
+  const updateAvatar = async (avatarUri, avatarFileName = "") => {
     if (!user?.id || !avatarUri) return false;
+    const resolvedFileName =
+      typeof avatarFileName === "string" && avatarFileName.trim()
+        ? avatarFileName.trim()
+        : `${Date.now()}-${user.id}.jpg`;
     let avatarUrl = await uploadImageAsync({
       uri: avatarUri,
       pathPrefix: `avatars/${user.id}`,
-      fileName: `${Date.now()}-${user.id}.jpg`,
+      fileName: resolvedFileName,
+      allowLocalFallback: !useFirebaseBackend,
     });
-    if (!avatarUrl) avatarUrl = avatarUri;
     if (!avatarUrl) return false;
 
     const cachedLocally = await cacheAvatarUrlForUser(user.id, avatarUrl);
