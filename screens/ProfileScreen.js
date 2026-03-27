@@ -83,7 +83,9 @@ const ProfileScreen = () => {
 
   const handleAvatarPick = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
+    const hasMediaAccess =
+      !!permission?.granted || permission?.accessPrivileges === "limited";
+    if (!hasMediaAccess) {
       Alert.alert("Permission needed", "Please allow media access to update avatar.");
       return;
     }

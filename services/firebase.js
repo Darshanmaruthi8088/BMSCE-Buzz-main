@@ -32,16 +32,56 @@ const firebaseConfig = {
 
 export const isFirebaseConfigured = Object.values(firebaseConfig).every(Boolean);
 
+const normalizeStorageBucketName = (value = "") => {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  const noProtocol = trimmed.replace(/^gs:\/\//i, "");
+  const noQuery = noProtocol.split("?")[0];
+  return noQuery.split("/")[0];
+};
+
 let app = null;
 let auth = null;
 let db = null;
 let storage = null;
+let uploadStorageTargets = [];
 
 if (isFirebaseConfigured) {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+
+  const configuredBucket = normalizeStorageBucketName(
+    firebaseConfig.storageBucket || storage?.app?.options?.storageBucket || ""
+  );
+  const projectId = String(firebaseConfig.projectId || "").trim();
+  const bucketCandidates = [configuredBucket];
+  if (projectId) {
+    bucketCandidates.push(`${projectId}.appspot.com`);
+    bucketCandidates.push(`${projectId}.firebasestorage.app`);
+  }
+
+  const seenBuckets = new Set();
+  uploadStorageTargets = bucketCandidates
+    .map(normalizeStorageBucketName)
+    .filter((bucket) => {
+      if (!bucket || seenBuckets.has(bucket)) return false;
+      seenBuckets.add(bucket);
+      return true;
+    })
+    .map((bucket) => {
+      try {
+        return { bucket, instance: getStorage(app, `gs://${bucket}`) };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+
+  if (!uploadStorageTargets.length && storage) {
+    uploadStorageTargets = [{ bucket: configuredBucket || "default", instance: storage }];
+  }
 }
 
 export { app, auth, db, storage, firebaseConfig };
@@ -186,36 +226,53 @@ export const uploadImageAsync = async ({
   const sourceUri = persistedSourceUri || uri;
   const localFallbackUri = isPersistedLocalMediaUri(sourceUri) ? sourceUri : "";
 
-  if (!storage) return allowLocalFallback ? localFallbackUri : "";
+  const storageTargets = uploadStorageTargets.length
+    ? uploadStorageTargets
+    : storage
+      ? [{ bucket: "default", instance: storage }]
+      : [];
+  if (!storageTargets.length) return allowLocalFallback ? localFallbackUri : "";
 
   const ext = getImageExtension(fileName || sourceUri || uri);
   const finalName = fileName || `${Date.now()}.${ext}`;
   const cleanName = finalName.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const storageRef = ref(storage, `${pathPrefix}/${cleanName}`);
+  const objectPath = `${pathPrefix}/${cleanName}`;
+  let lastError = null;
 
-  try {
-    const blob = await getBlobFromUri(sourceUri);
-    const contentType = getContentType(ext, blob?.type || "");
-    await uploadBytes(storageRef, blob, { contentType });
-    if (typeof blob?.close === "function") blob.close();
-    return await getDownloadURL(storageRef);
-  } catch (error) {
+  for (const target of storageTargets) {
+    const storageRef = ref(target.instance, objectPath);
     try {
-      const base64 = await FileSystem.readAsStringAsync(sourceUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      if (!base64) throw new Error("Image file is empty.");
-      const contentType = getContentType(ext, "");
-      await uploadString(storageRef, base64, "base64", { contentType });
+      let blob = null;
+      try {
+        blob = await getBlobFromUri(sourceUri);
+        const contentType = getContentType(ext, blob?.type || "");
+        await uploadBytes(storageRef, blob, { contentType });
+      } finally {
+        if (typeof blob?.close === "function") blob.close();
+      }
       return await getDownloadURL(storageRef);
-    } catch (fallbackError) {
-      const code = fallbackError?.code || error?.code || "unknown";
-      const message = fallbackError?.message || error?.message || "Image upload failed.";
-      console.warn(`Image upload failed (${code}): ${message}`);
-      if (allowLocalFallback && localFallbackUri) return localFallbackUri;
-      return "";
+    } catch (error) {
+      lastError = error;
+      try {
+        const base64 = await FileSystem.readAsStringAsync(sourceUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        if (!base64) throw new Error("Image file is empty.");
+        const contentType = getContentType(ext, "");
+        await uploadString(storageRef, base64, "base64", { contentType });
+        return await getDownloadURL(storageRef);
+      } catch (fallbackError) {
+        lastError = fallbackError || error;
+      }
     }
   }
+
+  const code = lastError?.code || "unknown";
+  const message = lastError?.message || "Image upload failed.";
+  const buckets = storageTargets.map((target) => target.bucket).join(", ");
+  console.warn(`Image upload failed (${code}): ${message}. Buckets tried: ${buckets}`);
+  if (allowLocalFallback && localFallbackUri) return localFallbackUri;
+  return "";
 };
 
 const isExpoGoClient =

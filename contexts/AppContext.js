@@ -994,7 +994,7 @@ export const AppProvider = ({ children }) => {
         uri: data.coverImageUri,
         pathPrefix: `posts/${user.id}`,
         fileName: coverImageName,
-        allowLocalFallback: !useFirebaseBackend,
+        allowLocalFallback: true,
       });
       if (!coverImage) return false;
     }

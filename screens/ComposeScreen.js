@@ -140,7 +140,9 @@ const ComposeScreen = () => {
 
   const pickCoverImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
+    const hasMediaAccess =
+      !!permission?.granted || permission?.accessPrivileges === "limited";
+    if (!hasMediaAccess) {
       Alert.alert("Permission needed", "Please allow media access to select a cover image.");
       return;
     }
