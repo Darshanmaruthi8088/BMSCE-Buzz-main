@@ -110,6 +110,7 @@ const getContentType = (extension = "", blobType = "") =>
 const isHttpUri = (value = "") => /^https?:\/\//i.test(String(value || ""));
 const isFirebaseStorageUri = (value = "") => /^gs:\/\//i.test(String(value || ""));
 const hasUriScheme = (value = "") => /^[a-z][a-z0-9+.-]*:/i.test(String(value || ""));
+const FILESYSTEM_BASE64_ENCODING = FileSystem?.EncodingType?.Base64 || "base64";
 
 const getLocalMediaBaseDir = () =>
   `${FileSystem.documentDirectory || FileSystem.cacheDirectory || ""}local-media`;
@@ -187,11 +188,11 @@ const persistLocalImageUri = async (uri, sourceName = "") => {
 
   try {
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: FILESYSTEM_BASE64_ENCODING,
     });
     if (!base64) throw new Error("Image file is empty.");
     await FileSystem.writeAsStringAsync(target, base64, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: FILESYSTEM_BASE64_ENCODING,
     });
     return target;
   } catch {
@@ -202,7 +203,7 @@ const persistLocalImageUri = async (uri, sourceName = "") => {
     const blob = await getBlobFromUri(uri);
     const base64 = await blobToBase64(blob);
     await FileSystem.writeAsStringAsync(target, base64, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: FILESYSTEM_BASE64_ENCODING,
     });
     if (typeof blob?.close === "function") blob.close();
     return target;
@@ -264,7 +265,7 @@ export const uploadImageAsync = async ({
       lastError = error;
       try {
         const base64 = await FileSystem.readAsStringAsync(sourceUri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: FILESYSTEM_BASE64_ENCODING,
         });
         if (!base64) throw new Error("Image file is empty.");
         const contentType = getContentType(ext, "");

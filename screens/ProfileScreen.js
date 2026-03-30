@@ -18,6 +18,7 @@ import { useApp } from "../contexts/AppContext";
 import { getTheme } from "../services/theme";
 
 const AVATAR_DEFAULT_EXTENSION = "jpg";
+const FILESYSTEM_BASE64_ENCODING = FileSystem?.EncodingType?.Base64 || "base64";
 
 const getExtensionFromName = (value = "") => {
   const normalized = String(value || "").split("?")[0];
@@ -67,7 +68,7 @@ const resolveAvatarUploadUri = async (asset = {}) => {
   try {
     await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
     await FileSystem.writeAsStringAsync(targetUri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: FILESYSTEM_BASE64_ENCODING,
     });
     return targetUri;
   } catch (error) {

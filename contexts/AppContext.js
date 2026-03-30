@@ -163,6 +163,7 @@ const normalizeReadNotificationIds = (value) =>
     : {};
 
 const MAX_AVATAR_BASE64_LENGTH = 750_000;
+const FILESYSTEM_BASE64_ENCODING = FileSystem?.EncodingType?.Base64 || "base64";
 const AVATAR_MIME_BY_EXT = {
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
@@ -184,7 +185,7 @@ const buildAvatarDataUri = async (uri = "", fileName = "") => {
   if (!uri) return "";
   try {
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: FILESYSTEM_BASE64_ENCODING,
     });
     if (!base64 || base64.length > MAX_AVATAR_BASE64_LENGTH) return "";
     const ext = getAvatarExtension(fileName) || getAvatarExtension(uri) || "jpg";
