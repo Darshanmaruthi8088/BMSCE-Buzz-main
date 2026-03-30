@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "676978260503",
+    "project_id": "bmsce-buzz-c461b",
+    "storage_bucket": "bmsce-buzz-c461b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:676978260503:android:889b551ede051cb0dd3a52",
+        "android_client_info": {
+          "package_name": "com.bmsce.buzz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAaJG53SgxKbt_Myih7hrt5cFAg6AUmnOc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -14,7 +14,7 @@
         "REACT_APP_FIREBASE_STORAGE_BUCKET": "bmsce-buzz-c461b.firebasestorage.app",
         "REACT_APP_FIREBASE_MESSAGING_SENDER_ID": "676978260503",
         "REACT_APP_FIREBASE_APP_ID": "1:676978260503:web:95622c129de942fadd3a52",
-        "REACT_APP_ENABLE_NATIVE_PUSH": "false"
+        "REACT_APP_ENABLE_NATIVE_PUSH": "true"
       }
     },
     "preview": {
@@ -29,7 +29,7 @@
         "REACT_APP_FIREBASE_STORAGE_BUCKET": "bmsce-buzz-c461b.firebasestorage.app",
         "REACT_APP_FIREBASE_MESSAGING_SENDER_ID": "676978260503",
         "REACT_APP_FIREBASE_APP_ID": "1:676978260503:web:95622c129de942fadd3a52",
-        "REACT_APP_ENABLE_NATIVE_PUSH": "false"
+        "REACT_APP_ENABLE_NATIVE_PUSH": "true"
       }
     },
     "production": {
@@ -41,7 +41,7 @@
         "REACT_APP_FIREBASE_STORAGE_BUCKET": "bmsce-buzz-c461b.firebasestorage.app",
         "REACT_APP_FIREBASE_MESSAGING_SENDER_ID": "676978260503",
         "REACT_APP_FIREBASE_APP_ID": "1:676978260503:web:95622c129de942fadd3a52",
-        "REACT_APP_ENABLE_NATIVE_PUSH": "false"
+        "REACT_APP_ENABLE_NATIVE_PUSH": "true"
       }
     }
   },
