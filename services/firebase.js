@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { initializeApp, getApp, getApps } from "firebase/app";
