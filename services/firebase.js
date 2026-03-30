@@ -21,6 +21,11 @@ const readEnv = (...keys) => {
   return "";
 };
 
+const isNativePushEnabled = () =>
+  String(readEnv("REACT_APP_ENABLE_NATIVE_PUSH", "EXPO_PUBLIC_ENABLE_NATIVE_PUSH") || "")
+    .trim()
+    .toLowerCase() === "true";
+
 const firebaseConfig = {
   apiKey: readEnv("REACT_APP_FIREBASE_API_KEY", "EXPO_PUBLIC_FIREBASE_API_KEY"),
   authDomain: readEnv("REACT_APP_FIREBASE_AUTH_DOMAIN", "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN"),
@@ -298,6 +303,15 @@ let notificationsModule = null;
 let isNotificationHandlerConfigured = false;
 let didLogNotificationModuleError = false;
 
+const isMissingNativeFirebaseAppError = (error) => {
+  const message = String(error?.message || error || "");
+  return (
+    /default firebaseapp is not initialized/i.test(message) ||
+    /firebaseapp\.initializeapp/i.test(message) ||
+    /push-notifications\/fcm-credentials/i.test(message)
+  );
+};
+
 const getNotificationsModule = () => {
   if (isExpoGoClient) return null;
   if (!notificationsModule) {
@@ -305,7 +319,7 @@ const getNotificationsModule = () => {
       notificationsModule = require("expo-notifications");
     } catch (error) {
       if (!didLogNotificationModuleError) {
-        console.error("Failed to load expo-notifications module:", error);
+        console.warn("Failed to load expo-notifications module:", error);
         didLogNotificationModuleError = true;
       }
       return null;
@@ -327,6 +341,7 @@ const getNotificationsModule = () => {
 };
 
 export const requestFcmToken = async () => {
+  if (!isNativePushEnabled()) return null;
   if (!Device.isDevice || isExpoGoClient) return null;
 
   const Notifications = getNotificationsModule();
@@ -349,7 +364,13 @@ export const requestFcmToken = async () => {
     const token = await Notifications.getDevicePushTokenAsync();
     return token?.data || null;
   } catch (error) {
-    console.error("Failed to get native push token:", error);
+    if (isMissingNativeFirebaseAppError(error)) {
+      console.warn(
+        "Native push token unavailable: Android Firebase app is not initialized. Add FCM native config or keep REACT_APP_ENABLE_NATIVE_PUSH=false."
+      );
+      return null;
+    }
+    console.warn("Failed to get native push token:", error);
     return null;
   }
 };

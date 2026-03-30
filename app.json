@@ -1,17 +1,20 @@
 {
-  "expo": {
-    "extra": {
-      "REACT_APP_FIREBASE_API_KEY": "",
-      "REACT_APP_FIREBASE_AUTH_DOMAIN": "",
-      "REACT_APP_FIREBASE_PROJECT_ID": "",
-      "REACT_APP_FIREBASE_STORAGE_BUCKET": "",
-      "REACT_APP_FIREBASE_MESSAGING_SENDER_ID": "",
-      "REACT_APP_FIREBASE_APP_ID": "",
-      "REACT_APP_FIREBASE_VAPID_KEY": "",
-      "REACT_APP_ENABLE_NATIVE_PUSH": "false",
-      "eas": {
-        "projectId": "884a51e1-32de-4ff9-b940-4c5258cdb41f"
-      }
-    }
-  }
+"expo": {
+"android": {
+"package": "com.bmsce.buzz"
+},
+"extra": {
+"REACT_APP_FIREBASE_API_KEY": "",
+"REACT_APP_FIREBASE_AUTH_DOMAIN": "",
+"REACT_APP_FIREBASE_PROJECT_ID": "",
+"REACT_APP_FIREBASE_STORAGE_BUCKET": "",
+"REACT_APP_FIREBASE_MESSAGING_SENDER_ID": "",
+"REACT_APP_FIREBASE_APP_ID": "",
+"REACT_APP_FIREBASE_VAPID_KEY": "",
+"REACT_APP_ENABLE_NATIVE_PUSH": "false",
+"eas": {
+"projectId": "884a51e1-32de-4ff9-b940-4c5258cdb41f"
+}
+}
+}
 }
