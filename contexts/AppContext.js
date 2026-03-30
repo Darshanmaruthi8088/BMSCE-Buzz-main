@@ -1343,7 +1343,7 @@ export const AppProvider = ({ children }) => {
       uri: avatarUri,
       pathPrefix: `avatars/${user.id}`,
       fileName: resolvedFileName,
-      allowLocalFallback: !useFirebaseBackend,
+      allowLocalFallback: true,
     });
     if (!avatarUrl) return false;
 
