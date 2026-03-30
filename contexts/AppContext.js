@@ -162,6 +162,39 @@ const normalizeReadNotificationIds = (value) =>
       )
     : {};
 
+const MAX_AVATAR_BASE64_LENGTH = 750_000;
+const AVATAR_MIME_BY_EXT = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  heic: "image/heic",
+  heif: "image/heif",
+};
+
+const getAvatarExtension = (value = "") => {
+  const normalized = String(value || "").split("?")[0];
+  if (!normalized.includes(".")) return "";
+  const ext = normalized.split(".").pop()?.toLowerCase().trim() || "";
+  return /^[a-z0-9]+$/.test(ext) ? ext : "";
+};
+
+const buildAvatarDataUri = async (uri = "", fileName = "") => {
+  if (!uri) return "";
+  try {
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    if (!base64 || base64.length > MAX_AVATAR_BASE64_LENGTH) return "";
+    const ext = getAvatarExtension(fileName) || getAvatarExtension(uri) || "jpg";
+    const mimeType = AVATAR_MIME_BY_EXT[ext] || "image/jpeg";
+    return `data:${mimeType};base64,${base64}`;
+  } catch {
+    return "";
+  }
+};
+
 const getAuthErrorMessage = (err) => {
   const code = err?.code || "";
   if (code === "auth/email-already-in-use") return "This email is already registered. Please sign in.";
@@ -188,6 +221,35 @@ const getAuthErrorMessage = (err) => {
     return "Firestore is not fully enabled for this project.";
   }
   return err?.message || "Authentication failed. Please try again.";
+};
+
+const getAvatarUploadErrorMessage = (err) => {
+  const code = err?.code || "";
+  if (
+    code === "storage/unauthorized" ||
+    code === "storage/unauthenticated" ||
+    code === "permission-denied" ||
+    code === "firestore/permission-denied"
+  ) {
+    return "Avatar upload is blocked by Firebase rules. Allow authenticated users to write their own avatars in Storage and users collection.";
+  }
+  if (code === "storage/quota-exceeded") {
+    return "Firebase Storage quota exceeded. Upgrade plan or clean up storage to continue uploads.";
+  }
+  if (code === "storage/retry-limit-exceeded" || code === "network-request-failed") {
+    return "Network was unstable during upload. Please retry on a stable internet connection.";
+  }
+  if (code === "storage/object-not-found") {
+    return "Upload target bucket was not found. Verify Firebase Storage bucket configuration.";
+  }
+  if (code === "firestore/unavailable") {
+    return "Firestore is currently unavailable. Please try again in a moment.";
+  }
+  if (code === "invalid-argument" && /too large/i.test(String(err?.message || ""))) {
+    return "Selected image is too large to store in Firestore. Choose a smaller image and try again.";
+  }
+  if (err?.message) return err.message;
+  return "Could not upload avatar to cloud storage. Please verify Firebase configuration and retry.";
 };
 
 export const AppProvider = ({ children }) => {
@@ -1334,29 +1396,54 @@ export const AppProvider = ({ children }) => {
   };
 
   const updateAvatar = async (avatarUri, avatarFileName = "") => {
-    if (!user?.id || !avatarUri) return false;
+    if (!user?.id || !avatarUri) {
+      return { ok: false, message: "Select a valid image and try again." };
+    }
+    if (!useFirebaseBackend || !db) {
+      return { ok: false, message: "Firebase is not configured. Cloud avatar upload is unavailable." };
+    }
+
     const resolvedFileName =
       typeof avatarFileName === "string" && avatarFileName.trim()
         ? avatarFileName.trim()
         : `${Date.now()}-${user.id}.jpg`;
-    let avatarUrl = await uploadImageAsync({
-      uri: avatarUri,
-      pathPrefix: `avatars/${user.id}`,
-      fileName: resolvedFileName,
-      allowLocalFallback: true,
-    });
-    if (!avatarUrl) return false;
 
-    const cachedLocally = await cacheAvatarUrlForUser(user.id, avatarUrl);
-    setUser((prev) => (prev ? { ...prev, avatarUrl } : prev));
-    setUsers((prev) => prev.map((item) => (item.id === user.id ? { ...item, avatarUrl } : item)));
-    if (!useFirebaseBackend) return true;
+    let avatarUrl = "";
+    let uploadError = null;
+    try {
+      avatarUrl = await uploadImageAsync({
+        uri: avatarUri,
+        pathPrefix: `avatars/${user.id}`,
+        fileName: resolvedFileName,
+        allowLocalFallback: false,
+        throwOnFailure: true,
+      });
+    } catch (error) {
+      uploadError = error;
+      console.error("Failed to upload avatar to storage:", error);
+    }
+
+    if (!avatarUrl || !isHttpImageUri(avatarUrl)) {
+      // Firestore fallback keeps avatar persistent across logins/devices even if Storage rules are misconfigured.
+      avatarUrl = await buildAvatarDataUri(avatarUri, resolvedFileName);
+      if (!avatarUrl) {
+        const uploadMsg = uploadError ? getAvatarUploadErrorMessage(uploadError) : "Could not upload avatar.";
+        return {
+          ok: false,
+          message: `${uploadMsg} Choose a smaller image (square crop) and try again.`,
+        };
+      }
+    }
+
     try {
       await setDoc(doc(db, "users", user.id), { avatarUrl, updatedAt: serverTimestamp() }, { merge: true });
-      return true;
+      await cacheAvatarUrlForUser(user.id, avatarUrl);
+      setUser((prev) => (prev ? { ...prev, avatarUrl } : prev));
+      setUsers((prev) => prev.map((item) => (item.id === user.id ? { ...item, avatarUrl } : item)));
+      return { ok: true, message: "", avatarUrl };
     } catch (error) {
-      console.error("Failed to save avatar:", error);
-      return cachedLocally;
+      console.error("Failed to save avatar in Firestore:", error);
+      return { ok: false, message: getAvatarUploadErrorMessage(error) };
     }
   };
 

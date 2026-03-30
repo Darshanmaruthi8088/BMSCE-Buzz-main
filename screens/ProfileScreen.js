@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -15,6 +16,65 @@ import Avatar from "../components/Avatar";
 import { Badge, CategoryBadge, RoleBadge } from "../components/Badge";
 import { useApp } from "../contexts/AppContext";
 import { getTheme } from "../services/theme";
+
+const AVATAR_DEFAULT_EXTENSION = "jpg";
+
+const getExtensionFromName = (value = "") => {
+  const normalized = String(value || "").split("?")[0];
+  if (!normalized.includes(".")) return "";
+  const extension = normalized.split(".").pop()?.trim().toLowerCase() || "";
+  return /^[a-z0-9]+$/.test(extension) ? extension : "";
+};
+
+const getExtensionFromMimeType = (value = "") => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized.startsWith("image/")) return "";
+  const extension = normalized.slice("image/".length).split(";")[0].replace(/[^a-z0-9]/g, "");
+  return extension || "";
+};
+
+const resolveAvatarExtension = (asset = {}) =>
+  getExtensionFromName(asset?.fileName) ||
+  getExtensionFromName(asset?.uri) ||
+  getExtensionFromMimeType(asset?.mimeType) ||
+  AVATAR_DEFAULT_EXTENSION;
+
+const resolveAvatarFileName = (asset = {}, fallbackUri = "") => {
+  const assetName = typeof asset?.fileName === "string" ? asset.fileName.trim() : "";
+  if (assetName) {
+    return assetName.includes(".") ? assetName : `${assetName}.${resolveAvatarExtension(asset)}`;
+  }
+
+  const uriName = String(fallbackUri || asset?.uri || "").split("/").pop()?.split("?")[0] || "";
+  if (uriName) {
+    return uriName.includes(".") ? uriName : `${uriName}.${resolveAvatarExtension(asset)}`;
+  }
+  return `${Date.now()}-avatar.${resolveAvatarExtension(asset)}`;
+};
+
+const resolveAvatarUploadUri = async (asset = {}) => {
+  const originalUri = typeof asset?.uri === "string" ? asset.uri : "";
+  if (!originalUri) return "";
+  if (/^file:\/\//i.test(originalUri)) return originalUri;
+
+  const base64 = typeof asset?.base64 === "string" ? asset.base64 : "";
+  const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory || "";
+  if (!base64 || !baseDir) return originalUri;
+
+  const targetDir = `${baseDir}avatar-picks`;
+  const targetUri = `${targetDir}/${Date.now()}-${Math.round(Math.random() * 1_000_000)}.${resolveAvatarExtension(asset)}`;
+
+  try {
+    await FileSystem.makeDirectoryAsync(targetDir, { intermediates: true });
+    await FileSystem.writeAsStringAsync(targetUri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return targetUri;
+  } catch (error) {
+    console.warn("Failed to persist avatar pick locally:", error);
+    return originalUri;
+  }
+};
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -94,19 +154,24 @@ const ProfileScreen = () => {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.85,
+      quality: 0.65,
+      base64: true,
+      exif: false,
+      selectionLimit: 1,
     });
 
     if (result.canceled) return;
     const asset = result.assets?.[0];
     if (!asset?.uri) return;
+    const uploadUri = await resolveAvatarUploadUri(asset);
+    const uploadFileName = resolveAvatarFileName(asset, uploadUri || asset.uri);
 
-    const ok = await updateAvatar(
-      asset.uri,
-      asset.fileName || asset.uri.split("/").pop() || `${Date.now()}-avatar.jpg`
+    const avatarResult = await updateAvatar(
+      uploadUri || asset.uri,
+      uploadFileName
     );
-    if (!ok) {
-      Alert.alert("Avatar update failed", "Could not save avatar. Please try again.");
+    if (!avatarResult?.ok) {
+      Alert.alert("Avatar update failed", avatarResult?.message || "Could not save avatar. Please try again.");
     }
   };
 

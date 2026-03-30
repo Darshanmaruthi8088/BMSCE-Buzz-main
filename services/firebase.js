@@ -217,6 +217,7 @@ export const uploadImageAsync = async ({
   pathPrefix = "uploads",
   fileName = "",
   allowLocalFallback = true,
+  throwOnFailure = false,
 } = {}) => {
   if (!uri) return "";
   if (isHttpUri(uri)) return uri;
@@ -224,14 +225,22 @@ export const uploadImageAsync = async ({
 
   const persistedSourceUri = await persistLocalImageUri(uri, fileName || uri);
   const sourceUri = persistedSourceUri || uri;
-  const localFallbackUri = isPersistedLocalMediaUri(sourceUri) ? sourceUri : "";
+  const localFallbackUri =
+    isPersistedLocalMediaUri(sourceUri) || (allowLocalFallback && isLikelyLocalMediaUri(sourceUri))
+      ? sourceUri
+      : "";
 
   const storageTargets = uploadStorageTargets.length
     ? uploadStorageTargets
     : storage
       ? [{ bucket: "default", instance: storage }]
       : [];
-  if (!storageTargets.length) return allowLocalFallback ? localFallbackUri : "";
+  if (!storageTargets.length) {
+    if (throwOnFailure) {
+      throw new Error("Firebase Storage is not configured.");
+    }
+    return allowLocalFallback ? localFallbackUri : "";
+  }
 
   const ext = getImageExtension(fileName || sourceUri || uri);
   const finalName = fileName || `${Date.now()}.${ext}`;
@@ -272,6 +281,11 @@ export const uploadImageAsync = async ({
   const buckets = storageTargets.map((target) => target.bucket).join(", ");
   console.warn(`Image upload failed (${code}): ${message}. Buckets tried: ${buckets}`);
   if (allowLocalFallback && localFallbackUri) return localFallbackUri;
+  if (throwOnFailure) {
+    const uploadError = lastError instanceof Error ? lastError : new Error(message);
+    if (!uploadError.code && code !== "unknown") uploadError.code = code;
+    throw uploadError;
+  }
   return "";
 };
 
