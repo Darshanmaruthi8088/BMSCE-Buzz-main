@@ -224,6 +224,11 @@ const getAuthErrorMessage = (err) => {
   return err?.message || "Authentication failed. Please try again.";
 };
 
+const isFirestorePermissionDeniedError = (err) => {
+  const code = String(err?.code || "").trim().toLowerCase();
+  return code === "permission-denied" || code === "firestore/permission-denied";
+};
+
 const getAvatarUploadErrorMessage = (err) => {
   const code = err?.code || "";
   if (
@@ -687,6 +692,37 @@ export const AppProvider = ({ children }) => {
       return { ok: false, message: "Firebase is not configured. Configure .env and retry." };
     }
 
+    const safeGetUserSnapshot = async (userRef) => {
+      try {
+        return await getDoc(userRef);
+      } catch (error) {
+        if (isFirestorePermissionDeniedError(error)) {
+          console.warn(
+            "[Auth] Firestore profile read is blocked by security rules. Continuing with local profile fallback.",
+            error
+          );
+          return null;
+        }
+        throw error;
+      }
+    };
+
+    const safeSetUserProfile = async (userRef, data, options = {}, contextLabel = "auth") => {
+      try {
+        await setDoc(userRef, data, options);
+        return true;
+      } catch (error) {
+        if (isFirestorePermissionDeniedError(error)) {
+          console.warn(
+            `[Auth] Firestore profile write blocked during ${contextLabel}. Continuing sign-in without blocking the session.`,
+            error
+          );
+          return false;
+        }
+        throw error;
+      }
+    };
+
     try {
       if (tab === "signup") {
         const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
@@ -709,7 +745,7 @@ export const AppProvider = ({ children }) => {
           updatedAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
         };
-        await setDoc(doc(db, "users", credential.user.uid), profileData);
+        await safeSetUserProfile(doc(db, "users", credential.user.uid), profileData, {}, "signup");
         onLogin({ uid: credential.user.uid, ...profileData });
         return { ok: true, message: "" };
       }
@@ -744,10 +780,11 @@ export const AppProvider = ({ children }) => {
         credential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       }
       const userRef = doc(db, "users", credential.user.uid);
-      const userSnap = await getDoc(userRef);
+      const userSnap = await safeGetUserSnapshot(userRef);
+      const hasUserDoc = !!userSnap?.exists?.();
 
       if (adminLoginAttempt) {
-        const existingAdminData = userSnap.data() || {};
+        const existingAdminData = userSnap?.data?.() || {};
         const existingAvatarUrl = typeof existingAdminData.avatarUrl === "string" ? existingAdminData.avatarUrl : "";
         const existingAvatar =
           typeof existingAdminData.avatar === "string" && existingAdminData.avatar.trim()
@@ -766,18 +803,18 @@ export const AppProvider = ({ children }) => {
           securityNickname: PRIMARY_ADMIN.nickname,
           securityFavoriteSport: PRIMARY_ADMIN.favoriteSport,
           recoveryPassword: PRIMARY_ADMIN.password,
-          readNotificationIds: normalizeReadNotificationIds(userSnap.data()?.readNotificationIds),
-          createdAt: userSnap.exists() ? userSnap.data()?.createdAt || serverTimestamp() : serverTimestamp(),
+          readNotificationIds: normalizeReadNotificationIds(existingAdminData.readNotificationIds),
+          createdAt: hasUserDoc ? existingAdminData.createdAt || serverTimestamp() : serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
         };
-        await setDoc(userRef, adminProfile, { merge: true });
+        await safeSetUserProfile(userRef, adminProfile, { merge: true }, "admin login");
         await enforceSingleAdminAccount(credential.user.uid);
         onLogin({ uid: credential.user.uid, ...adminProfile });
         return { ok: true, message: "" };
       }
 
-      if (!userSnap.exists()) {
+      if (!hasUserDoc) {
         const selectedRole = USERS[requestedRole] || USERS.user;
         const bootstrapProfile = {
           role: requestedRole,
@@ -794,12 +831,12 @@ export const AppProvider = ({ children }) => {
           updatedAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
         };
-        await setDoc(userRef, bootstrapProfile, { merge: true });
+        await safeSetUserProfile(userRef, bootstrapProfile, { merge: true }, "profile bootstrap");
         onLogin({ uid: credential.user.uid, ...bootstrapProfile });
         return { ok: true, message: "" };
       }
 
-      const stored = userSnap.data() || {};
+      const stored = userSnap?.data?.() || {};
       if (normalizeEmail(stored.email || trimmedEmail) !== trimmedEmail) {
         await signOut(auth);
         return { ok: false, message: "Email does not match the registered profile." };
@@ -840,7 +877,7 @@ export const AppProvider = ({ children }) => {
         readNotificationIds: normalizeReadNotificationIds(stored.readNotificationIds),
       };
 
-      await setDoc(
+      await safeSetUserProfile(
         userRef,
         {
           updatedAt: serverTimestamp(),
@@ -854,7 +891,8 @@ export const AppProvider = ({ children }) => {
           userType: profileData.userType || null,
           readNotificationIds: profileData.readNotificationIds,
         },
-        { merge: true }
+        { merge: true },
+        "login profile sync"
       );
 
       onLogin({ uid: credential.user.uid, ...profileData });
