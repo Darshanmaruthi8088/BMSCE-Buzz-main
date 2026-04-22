@@ -1,0 +1,31 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isPrimaryAdmin() {
+      return signedIn() && request.auth.token.email == "dd7085646@gmail.com";
+    }
+
+    match /avatars/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /posts/{userId}/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if signedIn() && (request.auth.uid == userId || isPrimaryAdmin());
+    }
+
+    match /uploads/{allPaths=**} {
+      allow read, write: if signedIn();
+    }
+
+    match /{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+  }
+}
