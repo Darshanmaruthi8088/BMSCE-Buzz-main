@@ -178,7 +178,8 @@ const ArticleScreen = () => {
 
           <View style={[styles.authorRow, { borderTopColor: theme.border, borderBottomColor: theme.border }]}> 
             <Avatar
-              initials={item.author?.split(" ").map((word) => word[0]).join("").slice(0, 2) || "U"}
+              initials={item.authorAvatar || item.author?.split(" ").map((word) => word[0]).join("").slice(0, 2) || "U"}
+              imageUrl={item.authorAvatarUrl}
               size={40}
               color="#059669"
             />
@@ -265,7 +266,7 @@ const ArticleScreen = () => {
                   </Text>
                   <Text style={[styles.commentText, { color: theme.text }]}>{commentItem.text}</Text>
                 </View>
-                <Text style={[styles.commentFooter, { color: theme.text3 }]}>? {commentItem.likes} | Reply</Text>
+                <Text style={[styles.commentFooter, { color: theme.text3 }]}>Likes {commentItem.likes} | Reply</Text>
               </View>
             </View>
           ))}

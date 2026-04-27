@@ -10,6 +10,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Avatar from "../components/Avatar";
+import { RoleBadge } from "../components/Badge";
 import NewsCard from "../components/NewsCard";
 import { useApp } from "../contexts/AppContext";
 import { CATEGORIES } from "../services/constants";
@@ -18,24 +20,50 @@ import { getTheme } from "../services/theme";
 const SearchScreen = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { dark, user, newsWithUser, toggleBookmark, toggleLike, incrementArticleViews } = useApp();
+  const { dark, user, users, isAdmin, newsWithUser, toggleBookmark, toggleLike, incrementArticleViews } = useApp();
   const theme = useMemo(() => getTheme(dark), [dark]);
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
+  const [resultType, setResultType] = useState("all");
 
-  const results = useMemo(() => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const newsResults = useMemo(() => {
     return newsWithUser.filter((item) => {
-      if (item.status === "pending") return false;
-      const q = query.toLowerCase();
+      const canViewItem =
+        item.status === "published" ||
+        (item.status === "pending" && (isAdmin || item.authorId === user?.id));
+      if (!canViewItem) return false;
       const matchQuery =
-        !q ||
-        item.title?.toLowerCase().includes(q) ||
-        item.summary?.toLowerCase().includes(q) ||
-        item.tags?.some((tag) => tag.toLowerCase().includes(q));
+        !normalizedQuery ||
+        item.title?.toLowerCase().includes(normalizedQuery) ||
+        item.summary?.toLowerCase().includes(normalizedQuery) ||
+        item.body?.toLowerCase().includes(normalizedQuery) ||
+        item.author?.toLowerCase().includes(normalizedQuery) ||
+        item.tags?.some((tag) => tag.toLowerCase().includes(normalizedQuery));
       return matchQuery && (category === "All" || item.category === category);
     });
-  }, [newsWithUser, query, category]);
+  }, [newsWithUser, normalizedQuery, category, isAdmin, user?.id]);
+
+  const userResults = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return users.filter((item) => {
+      return (
+        item.name?.toLowerCase().includes(normalizedQuery) ||
+        item.email?.toLowerCase().includes(normalizedQuery) ||
+        item.dept?.toLowerCase().includes(normalizedQuery) ||
+        item.usn?.toLowerCase().includes(normalizedQuery) ||
+        item.userType?.toLowerCase().includes(normalizedQuery)
+      );
+    });
+  }, [users, normalizedQuery]);
+
+  const showNewsResults = resultType === "all" || resultType === "news";
+  const showUserResults = resultType === "all" || resultType === "users";
+  const visibleNews = showNewsResults ? newsResults : [];
+  const visibleUsers = showUserResults ? userResults : [];
+  const totalResults = visibleNews.length + visibleUsers.length;
 
   const openArticle = async (item) => {
     await incrementArticleViews(item);
@@ -61,29 +89,55 @@ const SearchScreen = () => {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search articles, events, clubs"
+            placeholder="Search articles, users, clubs"
             placeholderTextColor={theme.text3}
             style={[styles.searchInput, { color: theme.text }]}
           />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesWrap}>
-          {CATEGORIES.map((value) => (
+        <View style={styles.resultTypeWrap}>
+          {[
+            ["all", "All"],
+            ["news", "News"],
+            ["users", "Users"],
+          ].map(([value, label]) => (
             <Pressable
               key={value}
-              onPress={() => setCategory(value)}
+              onPress={() => setResultType(value)}
               style={[
-                styles.categoryPill,
+                styles.resultTypePill,
                 {
-                  borderColor: category === value ? theme.accent : theme.border,
-                  backgroundColor: category === value ? `${theme.accent}1F` : "transparent",
+                  borderColor: resultType === value ? theme.accent : theme.border,
+                  backgroundColor: resultType === value ? `${theme.accent}1F` : "transparent",
                 },
               ]}
             >
-              <Text style={[styles.categoryText, { color: category === value ? theme.accent : theme.text2 }]}>{value}</Text>
+              <Text style={[styles.resultTypeText, { color: resultType === value ? theme.accent : theme.text2 }]}>
+                {label}
+              </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </View>
+
+        {resultType !== "users" ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesWrap}>
+            {CATEGORIES.map((value) => (
+              <Pressable
+                key={value}
+                onPress={() => setCategory(value)}
+                style={[
+                  styles.categoryPill,
+                  {
+                    borderColor: category === value ? theme.accent : theme.border,
+                    backgroundColor: category === value ? `${theme.accent}1F` : "transparent",
+                  },
+                ]}
+              >
+                <Text style={[styles.categoryText, { color: category === value ? theme.accent : theme.text2 }]}>{value}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -105,10 +159,10 @@ const SearchScreen = () => {
         ) : null}
 
         <Text style={[styles.resultCount, { color: theme.text3 }]}>
-          {results.length} result{results.length !== 1 ? "s" : ""}
+          {totalResults} result{totalResults !== 1 ? "s" : ""}
         </Text>
 
-        {results.map((item) => (
+        {visibleNews.map((item) => (
           <NewsCard
             key={item.id}
             item={item}
@@ -119,6 +173,27 @@ const SearchScreen = () => {
             onBookmark={toggleBookmark}
             onToggleLike={toggleLike}
           />
+        ))}
+
+        {visibleUsers.map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={() => {
+              if (isAdmin) navigation.navigate("UserEdit", { userId: item.id });
+            }}
+            style={[styles.userCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+          >
+            <Avatar initials={item.avatar} imageUrl={item.avatarUrl} size={38} color={item.role === "admin" ? "#7C3AED" : "#3B82F6"} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.userName, { color: theme.text }]}>{item.name}</Text>
+              <Text style={[styles.userMeta, { color: theme.text2 }]}>
+                {item.dept}
+                {item.usn ? ` | ${item.usn}` : ""}
+              </Text>
+              {isAdmin ? <Text style={[styles.userMeta, { color: theme.text3 }]}>{item.email}</Text> : null}
+            </View>
+            <RoleBadge role={item.role} userType={item.userType} />
+          </Pressable>
         ))}
       </ScrollView>
     </View>
@@ -154,6 +229,21 @@ const styles = StyleSheet.create({
   },
   categoriesWrap: {
     gap: 7,
+  },
+  resultTypeWrap: {
+    flexDirection: "row",
+    gap: 7,
+    marginBottom: 10,
+  },
+  resultTypePill: {
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  resultTypeText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   categoryPill: {
     borderWidth: 1.5,
@@ -198,6 +288,25 @@ const styles = StyleSheet.create({
   resultCount: {
     marginBottom: 10,
     fontSize: 11,
+    fontWeight: "600",
+  },
+  userCard: {
+    borderWidth: 1,
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  userMeta: {
+    marginTop: 2,
+    fontSize: 10.5,
     fontWeight: "600",
   },
 });

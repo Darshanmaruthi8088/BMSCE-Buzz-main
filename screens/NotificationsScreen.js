@@ -11,7 +11,8 @@ const NotificationsScreen = () => {
   const insets = useSafeAreaInsets();
   const { dark, notifs, markNotifRead, markAllNotifsRead, isAdmin } = useApp();
   const theme = useMemo(() => getTheme(dark), [dark]);
-  const unread = notifs.filter((item) => !item.read).length;
+  const unreadNotifs = useMemo(() => notifs.filter((item) => !item.read), [notifs]);
+  const unread = unreadNotifs.length;
 
   const openNotification = async (notif) => {
     await markNotifRead(notif.id);
@@ -59,11 +60,11 @@ const NotificationsScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {notifs.length === 0 ? (
-          <Text style={[styles.emptyText, { color: theme.text3 }]}>No notifications yet.</Text>
+        {unreadNotifs.length === 0 ? (
+          <Text style={[styles.emptyText, { color: theme.text3 }]}>No new notifications.</Text>
         ) : null}
 
-        {notifs.map((notif) => {
+        {unreadNotifs.map((notif) => {
           const color = NOTIFICATION_TYPE_COLORS[notif.type] || theme.accent;
           return (
             <Pressable
@@ -72,8 +73,8 @@ const NotificationsScreen = () => {
               style={[
                 styles.card,
                 {
-                  backgroundColor: notif.read ? theme.card : `${color}14`,
-                  borderColor: notif.read ? theme.border : `${color}55`,
+                  backgroundColor: `${color}14`,
+                  borderColor: `${color}55`,
                 },
               ]}
             >
@@ -82,13 +83,13 @@ const NotificationsScreen = () => {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: theme.text, fontWeight: notif.read ? "600" : "800" }]}>
+                <Text style={[styles.cardTitle, { color: theme.text, fontWeight: "800" }]}>
                   {notif.title}
                 </Text>
                 <Text style={[styles.cardTime, { color: theme.text3 }]}>{notif.time}</Text>
               </View>
 
-              {!notif.read ? <View style={[styles.dot, { backgroundColor: color }]} /> : null}
+              <View style={[styles.dot, { backgroundColor: color }]} />
             </Pressable>
           );
         })}

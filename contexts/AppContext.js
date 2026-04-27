@@ -162,6 +162,11 @@ const normalizeReadNotificationIds = (value) =>
       )
     : {};
 
+const normalizeNotificationCutoffMs = (value) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : 0;
+};
+
 const MAX_AVATAR_BASE64_LENGTH = 750_000;
 const FILESYSTEM_BASE64_ENCODING = FileSystem?.EncodingType?.Base64 || "base64";
 const AVATAR_MIME_BY_EXT = {
@@ -265,6 +270,7 @@ export const AppProvider = ({ children }) => {
   const [notifs, setNotifs] = useState(LOCAL_NOTIFS);
   const [users, setUsers] = useState([]);
   const viewedArticleLocksRef = useRef(new Set());
+  const likedArticleLocksRef = useRef(new Set());
   const repairedAvatarUrisRef = useRef(new Set());
   const repairedPostImageUrisRef = useRef(new Set());
 
@@ -272,6 +278,7 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     viewedArticleLocksRef.current = new Set();
+    likedArticleLocksRef.current = new Set();
   }, [user?.id]);
 
   useEffect(() => {
@@ -413,6 +420,7 @@ export const AppProvider = ({ children }) => {
             year: role === "user" ? data.year || null : null,
             usn: role === "user" ? data.usn || null : null,
             readNotificationIds: normalizeReadNotificationIds(data.readNotificationIds),
+            notificationCutoffAtMs: normalizeNotificationCutoffMs(data.notificationCutoffAtMs),
             avatar: data.avatar || getInitials(data.name || "User"),
             avatarUrl: data.avatarUrl || "",
           };
@@ -437,6 +445,7 @@ export const AppProvider = ({ children }) => {
       collection(db, "notifications"),
       (snapshot) => {
         const readOverrides = normalizeReadNotificationIds(user?.readNotificationIds);
+        const cutoffMs = normalizeNotificationCutoffMs(user?.notificationCutoffAtMs);
         const mapped = snapshot.docs
           .map((notifDoc) => {
             const data = notifDoc.data() || {};
@@ -447,6 +456,14 @@ export const AppProvider = ({ children }) => {
             const canAccessByRole = roles.includes("all") || roles.includes(user.role);
             const canAccessByUserId = audienceUserIds.includes(user.id);
             if (!canAccessByRole && !canAccessByUserId) return null;
+
+            const createdAtMs =
+              typeof data.createdAt?.toMillis === "function"
+                ? data.createdAt.toMillis()
+                : Date.parse(data.createdAt || "") || 0;
+            if (cutoffMs && createdAtMs > 0 && createdAtMs < cutoffMs && !canAccessByUserId) {
+              return null;
+            }
             if (
               user.role === "user" &&
               typeof data.title === "string" &&
@@ -454,7 +471,9 @@ export const AppProvider = ({ children }) => {
             ) {
               return null;
             }
-            return mapFirestoreNotif(notifDoc.id, data, user.id, !!readOverrides[notifDoc.id]);
+            const mappedNotif = mapFirestoreNotif(notifDoc.id, data, user.id, !!readOverrides[notifDoc.id]);
+            if (mappedNotif.read) return null;
+            return mappedNotif;
           })
           .filter(Boolean)
           .sort((a, b) => b.createdAtMs - a.createdAtMs);
@@ -618,6 +637,7 @@ export const AppProvider = ({ children }) => {
       year: role === "user" ? profile?.year || base.year || null : null,
       usn: role === "user" ? profile?.usn || base.usn || null : null,
       readNotificationIds: normalizeReadNotificationIds(profile?.readNotificationIds),
+      notificationCutoffAtMs: normalizeNotificationCutoffMs(profile?.notificationCutoffAtMs),
     });
     if (nextAvatarUrl) {
       cacheAvatarUrlForUser(resolvedUserId, nextAvatarUrl);
@@ -739,6 +759,7 @@ export const AppProvider = ({ children }) => {
           securityFavoriteSport: trimmedFavoriteSport,
           recoveryPassword: trimmedPassword,
           readNotificationIds: {},
+          notificationCutoffAtMs: Date.now(),
           avatar: getInitials(resolvedName),
           avatarUrl: "",
           createdAt: serverTimestamp(),
@@ -804,6 +825,8 @@ export const AppProvider = ({ children }) => {
           securityFavoriteSport: PRIMARY_ADMIN.favoriteSport,
           recoveryPassword: PRIMARY_ADMIN.password,
           readNotificationIds: normalizeReadNotificationIds(existingAdminData.readNotificationIds),
+          notificationCutoffAtMs:
+            normalizeNotificationCutoffMs(existingAdminData.notificationCutoffAtMs) || Date.now(),
           createdAt: hasUserDoc ? existingAdminData.createdAt || serverTimestamp() : serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
@@ -827,6 +850,7 @@ export const AppProvider = ({ children }) => {
           year: userType === "student" ? year : null,
           usn: userType === "student" ? trimmedUsn || null : null,
           readNotificationIds: {},
+          notificationCutoffAtMs: Date.now(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           lastLoginAt: serverTimestamp(),
@@ -875,6 +899,8 @@ export const AppProvider = ({ children }) => {
               : stored.usn
             : null,
         readNotificationIds: normalizeReadNotificationIds(stored.readNotificationIds),
+        notificationCutoffAtMs:
+          normalizeNotificationCutoffMs(stored.notificationCutoffAtMs) || Date.now(),
       };
 
       await safeSetUserProfile(
@@ -890,6 +916,7 @@ export const AppProvider = ({ children }) => {
           usn: profileData.usn,
           userType: profileData.userType || null,
           readNotificationIds: profileData.readNotificationIds,
+          notificationCutoffAtMs: profileData.notificationCutoffAtMs,
         },
         { merge: true },
         "login profile sync"
@@ -992,10 +1019,11 @@ export const AppProvider = ({ children }) => {
           const data = snapshot.data() || {};
           const viewedBy = data.viewedBy && typeof data.viewedBy === "object" ? data.viewedBy : {};
           if (viewedBy[user.id]) return;
+          const nextViewedBy = { ...viewedBy, [user.id]: true };
 
           transaction.update(newsRef, {
-            views: increment(1),
-            [`viewedBy.${user.id}`]: true,
+            viewedBy: nextViewedBy,
+            views: Object.keys(nextViewedBy).length,
           });
         });
       } catch (error) {
@@ -1009,10 +1037,11 @@ export const AppProvider = ({ children }) => {
       prev.map((newsItem) => {
         if (newsItem.id !== item.id) return newsItem;
         if (newsItem.viewedBy?.[user.id]) return newsItem;
+        const nextViewedBy = { ...(newsItem.viewedBy || {}), [user.id]: true };
         return {
           ...newsItem,
-          views: (newsItem.views || 0) + 1,
-          viewedBy: { ...(newsItem.viewedBy || {}), [user.id]: true },
+          viewedBy: nextViewedBy,
+          views: Object.keys(nextViewedBy).length,
         };
       })
     );
@@ -1045,33 +1074,46 @@ export const AppProvider = ({ children }) => {
 
   const toggleLike = async (id) => {
     if (!user?.id || !id) return;
-    const target = news.find((item) => item.id === id);
-    if (!target) return;
-    const isLiked = !!target.likedBy?.[user.id];
+    const lockKey = `${user.id}:${id}`;
+    if (likedArticleLocksRef.current.has(lockKey)) return;
+    likedArticleLocksRef.current.add(lockKey);
 
     if (useFirebaseBackend) {
       try {
-        const nextLikedBy = { ...(target.likedBy || {}) };
-        if (isLiked) delete nextLikedBy[user.id];
-        else nextLikedBy[user.id] = true;
-        await updateDoc(doc(db, "news", id), {
-          likedBy: nextLikedBy,
-          likes: increment(isLiked ? -1 : 1),
+        const newsRef = doc(db, "news", id);
+        await runTransaction(db, async (transaction) => {
+          const snapshot = await transaction.get(newsRef);
+          if (!snapshot.exists()) return;
+
+          const data = snapshot.data() || {};
+          const likedBy = data.likedBy && typeof data.likedBy === "object" ? data.likedBy : {};
+          const nextLikedBy = { ...likedBy };
+          if (nextLikedBy[user.id]) delete nextLikedBy[user.id];
+          else nextLikedBy[user.id] = true;
+
+          transaction.update(newsRef, {
+            likedBy: nextLikedBy,
+            likes: Object.keys(nextLikedBy).length,
+          });
         });
       } catch (error) {
         console.error("Failed to update like:", error);
+      } finally {
+        likedArticleLocksRef.current.delete(lockKey);
       }
       return;
     }
-    setNews((prev) =>
-      prev.map((item) => {
+    setNews((prev) => {
+      const next = prev.map((item) => {
         if (item.id !== id) return item;
         const nextLikedBy = { ...(item.likedBy || {}) };
-        if (isLiked) delete nextLikedBy[user.id];
+        if (nextLikedBy[user.id]) delete nextLikedBy[user.id];
         else nextLikedBy[user.id] = true;
-        return { ...item, likedBy: nextLikedBy, likes: (item.likes || 0) + (isLiked ? -1 : 1) };
-      })
-    );
+        return { ...item, likedBy: nextLikedBy, likes: Object.keys(nextLikedBy).length };
+      });
+      likedArticleLocksRef.current.delete(lockKey);
+      return next;
+    });
   };
 
   const publishPost = async (data) => {
@@ -1116,6 +1158,8 @@ export const AppProvider = ({ children }) => {
       author: user.name,
       authorId: user.id,
       authorRole: user.role,
+      authorAvatar: user.avatar || getInitials(user.name || "User"),
+      authorAvatarUrl: user.avatarUrl || "",
       ...data,
       coverImage,
       summary: (data.body || "").slice(0, 160),
@@ -1335,9 +1379,7 @@ export const AppProvider = ({ children }) => {
     }, {});
     if (!Object.keys(readMapPatch).length) return;
 
-    setNotifs((prev) =>
-      prev.map((item) => (readMapPatch[item.id] ? { ...item, read: true } : item))
-    );
+    setNotifs((prev) => prev.filter((item) => !readMapPatch[item.id]));
     setUser((prev) =>
       prev
         ? {
@@ -1513,13 +1555,35 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const usersById = useMemo(
+    () =>
+      users.reduce((acc, item) => {
+        if (item?.id) acc[item.id] = item;
+        return acc;
+      }, {}),
+    [users]
+  );
+
   const newsWithUser = useMemo(
     () =>
-      news.map((item) => ({
-        ...item,
-        bookmarked: !!(user?.id && item.savedBy?.[user.id]),
-      })),
-    [news, user?.id]
+      news.map((item) => {
+        const authorProfile = item.authorId ? usersById[item.authorId] : null;
+        const authorName = item.author || authorProfile?.name || "Unknown";
+        const authorAvatarUrl = item.authorAvatarUrl || authorProfile?.avatarUrl || "";
+        const authorAvatar =
+          item.authorAvatar ||
+          authorProfile?.avatar ||
+          getInitials(authorName);
+
+        return {
+          ...item,
+          author: authorName,
+          authorAvatar,
+          authorAvatarUrl,
+          bookmarked: !!(user?.id && item.savedBy?.[user.id]),
+        };
+      }),
+    [news, user?.id, usersById]
   );
 
   const unreadCount = useMemo(() => notifs.filter((item) => !item.read).length, [notifs]);
@@ -1537,7 +1601,8 @@ export const AppProvider = ({ children }) => {
       newsWithUser
         .filter(
           (item) =>
-            item.status === "published" &&
+            (item.status === "published" ||
+              (item.status === "pending" && (isAdmin || (user?.id && item.authorId === user.id)))) &&
             ["Cultural Events", "Sports", "Exams", "Academics"].includes(item.category)
         )
         .map((item) => ({
@@ -1563,6 +1628,7 @@ export const AppProvider = ({ children }) => {
             time: formatEventTimeRange(startIso, endIso),
             venue: item.dept || "Campus",
             category: item.category,
+            status: item.status,
             color:
               item.category === "Sports"
                 ? "emerald"
@@ -1574,7 +1640,7 @@ export const AppProvider = ({ children }) => {
           };
         })
         .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime)),
-    [newsWithUser]
+    [newsWithUser, isAdmin, user?.id]
   );
 
   const value = {

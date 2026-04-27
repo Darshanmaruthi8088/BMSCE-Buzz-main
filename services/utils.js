@@ -50,6 +50,12 @@ export const mapFirestoreNews = (id, data = {}) => {
     data.createdAt && typeof data.createdAt.toDate === "function"
       ? data.createdAt.toDate().toISOString().slice(0, 10)
       : null;
+  const likedBy = data.likedBy && typeof data.likedBy === "object" ? data.likedBy : {};
+  const savedBy = data.savedBy && typeof data.savedBy === "object" ? data.savedBy : {};
+  const commentedBy = data.commentedBy && typeof data.commentedBy === "object" ? data.commentedBy : {};
+  const viewedBy = data.viewedBy && typeof data.viewedBy === "object" ? data.viewedBy : {};
+  const likesFromMap = Object.keys(likedBy).length;
+  const viewsFromMap = Object.keys(viewedBy).length;
 
   return {
     id,
@@ -60,15 +66,17 @@ export const mapFirestoreNews = (id, data = {}) => {
     author: data.author || "Unknown",
     authorId: data.authorId || "",
     authorRole: data.authorRole || "user",
+    authorAvatar: data.authorAvatar || getInitials(data.author || "Unknown"),
+    authorAvatarUrl: data.authorAvatarUrl || "",
     image: data.image || "academics",
     coverImage: data.coverImage || "",
-    views: Number.isFinite(data.views) ? data.views : 0,
-    likes: Number.isFinite(data.likes) ? data.likes : 0,
+    views: viewsFromMap || (Number.isFinite(data.views) ? data.views : 0),
+    likes: likesFromMap || (Number.isFinite(data.likes) ? data.likes : 0),
     comments: Number.isFinite(data.comments) ? data.comments : 0,
-    likedBy: data.likedBy && typeof data.likedBy === "object" ? data.likedBy : {},
-    savedBy: data.savedBy && typeof data.savedBy === "object" ? data.savedBy : {},
-    commentedBy: data.commentedBy && typeof data.commentedBy === "object" ? data.commentedBy : {},
-    viewedBy: data.viewedBy && typeof data.viewedBy === "object" ? data.viewedBy : {},
+    likedBy,
+    savedBy,
+    commentedBy,
+    viewedBy,
     tags: Array.isArray(data.tags) ? data.tags : [],
     status: data.status || "pending",
     priority: data.priority || "normal",

@@ -60,14 +60,12 @@ const AdminScreen = ({ route }) => {
     });
 
     return recentDays.map((day, index) => {
-      const dayViews = newsWithUser
-        .filter((item) => item.date === day)
-        .reduce((sum, item) => sum + (item.views || 0), 0);
+      const dayPosts = newsWithUser.filter((item) => item.date === day).length;
       const labelDate = new Date(day);
       return {
         key: `${day}-${index}`,
         d: labelDate.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1),
-        v: dayViews,
+        v: dayPosts,
       };
     });
   }, [newsWithUser]);
@@ -171,6 +169,7 @@ const AdminScreen = ({ route }) => {
             ["N", "Total", newsWithUser.length, "#3B82F6"],
             ["P", "Pending", pending.length, "#F59E0B"],
             ["OK", "Published", published.length, "#059669"],
+            ["U", "Users", users.length, "#1D4ED8"],
             ["V", "Views", viewLabel, "#7C3AED"],
           ].map(([icon, label, value, color]) => (
             <View key={label} style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border }]}> 
@@ -184,7 +183,7 @@ const AdminScreen = ({ route }) => {
         <View style={[styles.chartCard, { backgroundColor: theme.card, borderColor: theme.border }]}> 
           <View style={styles.chartHeader}>
             <Feather name="bar-chart-2" size={15} color={theme.accent} />
-            <Text style={[styles.chartTitle, { color: theme.text }]}>Weekly Views</Text>
+            <Text style={[styles.chartTitle, { color: theme.text }]}>Weekly Publications</Text>
           </View>
 
           <View style={styles.chartBars}>
@@ -232,7 +231,12 @@ const AdminScreen = ({ route }) => {
                   {item.summary}
                 </Text>
                 <View style={styles.authorMini}>
-                  <Avatar initials={item.author?.slice(0, 2)} size={22} color="#059669" />
+                  <Avatar
+                    initials={item.authorAvatar || item.author?.slice(0, 2)}
+                    imageUrl={item.authorAvatarUrl}
+                    size={22}
+                    color="#059669"
+                  />
                   <Text style={[styles.authorMiniText, { color: theme.text2 }]}>{item.author}  {item.date}</Text>
                 </View>
 
@@ -296,6 +300,11 @@ const AdminScreen = ({ route }) => {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.listTitle, { color: theme.text }]}>{item.name}</Text>
                   <Text style={[styles.userEmail, { color: theme.text2 }]}>{item.email}</Text>
+                  {item.role === "user" ? (
+                    <Text style={[styles.userDetails, { color: theme.text3 }]}>
+                      {item.userType === "faculty" ? "Faculty" : item.year || "Student"} {item.usn ? `| ${item.usn}` : ""}
+                    </Text>
+                  ) : null}
                   <View style={styles.userBadges}>
                     <RoleBadge role={item.role} userType={item.userType} />
                     <Badge text={item.dept} color="#475569" small />
@@ -607,6 +616,11 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 11,
+    marginBottom: 5,
+  },
+  userDetails: {
+    fontSize: 10,
+    fontWeight: "600",
     marginBottom: 5,
   },
   userBadges: {

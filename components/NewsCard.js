@@ -29,6 +29,7 @@ const NewsCard = ({
       <View style={[styles.headerRow, compact && styles.headerRowCompact]}>
         <View style={styles.badgeWrap}>
           <CategoryBadge category={item.category} small />
+          {item.status === "pending" ? <Badge text="Pending Review" color="#B45309" small /> : null}
           {item.priority === "urgent" ? <Badge text="Urgent" color="#DC2626" small /> : null}
         </View>
         <Pressable onPress={() => onBookmark?.(item.id)} style={styles.iconButton}>
@@ -63,7 +64,8 @@ const NewsCard = ({
       <View style={styles.footerRow}>
         <View style={styles.authorWrap}>
           <Avatar
-            initials={item.author?.split(" ").map((w) => w[0]).join("").slice(0, 2) || "U"}
+            initials={item.authorAvatar || item.author?.split(" ").map((w) => w[0]).join("").slice(0, 2) || "U"}
+            imageUrl={item.authorAvatarUrl}
             size={20}
             color="#3B82F6"
           />

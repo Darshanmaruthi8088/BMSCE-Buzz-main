@@ -24,6 +24,7 @@ const HomeScreen = () => {
     dark,
     toggleDark,
     user,
+    isAdmin,
     newsWithUser,
     importantNotice,
     toggleBookmark,
@@ -39,12 +40,15 @@ const HomeScreen = () => {
   const filtered = useMemo(
     () =>
       newsWithUser.filter((item) => {
-        if (item.status === "pending") return false;
+        const canViewItem =
+          item.status === "published" ||
+          (item.status === "pending" && (isAdmin || item.authorId === user?.id));
+        if (!canViewItem) return false;
         if (activeCat !== "All" && item.category !== activeCat) return false;
         if (filterDept !== "All Departments" && item.dept !== "All" && item.dept !== filterDept) return false;
         return true;
       }),
-    [newsWithUser, activeCat, filterDept]
+    [newsWithUser, activeCat, filterDept, isAdmin, user?.id]
   );
 
   const featured = filtered[0];
@@ -128,6 +132,7 @@ const HomeScreen = () => {
             >
               <View style={styles.featureBadges}>
                 <CategoryBadge category={featured.category} />
+                {featured.status === "pending" ? <Badge text="Pending Review" color="#B45309" /> : null}
                 {featured.priority === "urgent" ? <Badge text="Urgent" color="#DC2626" /> : null}
               </View>
 
@@ -139,7 +144,8 @@ const HomeScreen = () => {
               <View style={styles.featureFooter}>
                 <View style={styles.featureAuthorWrap}>
                   <Avatar
-                    initials={featured.author?.split(" ").map((w) => w[0]).join("").slice(0, 2) || "U"}
+                    initials={featured.authorAvatar || featured.author?.split(" ").map((w) => w[0]).join("").slice(0, 2) || "U"}
+                    imageUrl={featured.authorAvatarUrl}
                     size={24}
                     color="#059669"
                   />
