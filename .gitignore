@@ -28,3 +28,6 @@ yarn-error.log*
 dist/
 web-build/
 android/
+
+# local build caches
+.gradle-local/
