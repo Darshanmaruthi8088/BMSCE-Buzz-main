@@ -6,7 +6,7 @@
   },
   "client": [
     {
-      "client_info": {  
+      "client_info": {
         "mobilesdk_app_id": "1:676978260503:android:889b551ede051cb0dd3a52",
         "android_client_info": {
           "package_name": "com.bmsce.buzz"
