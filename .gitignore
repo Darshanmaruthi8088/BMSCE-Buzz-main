@@ -31,3 +31,4 @@ android/
 
 # local build caches
 .gradle-local/
+.g/
