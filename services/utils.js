@@ -24,9 +24,20 @@ export const normalizeAudienceRoles = (roles = []) =>
 export const normalizeAudienceUserIds = (userIds = []) =>
   [...new Set(userIds.filter((value) => typeof value === "string" && value.trim()).map((value) => value.trim()))];
 
+const toDateLike = (value) => {
+  if (!value) return null;
+  const parsed =
+    value instanceof Date
+      ? value
+      : typeof value?.toDate === "function"
+        ? value.toDate()
+        : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export const relativeTime = (value) => {
-  const date = value instanceof Date ? value : value?.toDate?.() || (value ? new Date(value) : null);
-  if (!date || Number.isNaN(date.getTime())) return "just now";
+  const date = toDateLike(value);
+  if (!date) return "just now";
   const diffMs = Date.now() - date.getTime();
   if (diffMs < 60_000) return "just now";
   if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`;
@@ -35,21 +46,38 @@ export const relativeTime = (value) => {
 };
 
 const normalizeDateTimeValue = (value) => {
-  if (!value) return null;
-  const parsed =
-    value instanceof Date
-      ? value
-      : typeof value?.toDate === "function"
-        ? value.toDate()
-        : new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  const parsed = toDateLike(value);
+  return parsed ? parsed.toISOString() : null;
+};
+
+export const getPostReleaseDate = (post = {}) =>
+  toDateLike(post?.publishedAt) ||
+  toDateLike(post?.createdAt) ||
+  toDateLike(post?.startDateTime) ||
+  toDateLike(post?.date);
+
+export const getPostReleaseTimeMs = (post = {}) => getPostReleaseDate(post)?.getTime() || 0;
+
+export const formatPostReleaseDateTime = (post = {}) => {
+  const value = getPostReleaseDate(post);
+  if (!value) return "Unknown";
+  return value.toLocaleString([], {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 };
 
 export const mapFirestoreNews = (id, data = {}) => {
+  const createdAtIso = normalizeDateTimeValue(data.createdAt);
+  const publishedAtIso = normalizeDateTimeValue(data.publishedAt);
   const fromCreatedAt =
-    data.createdAt && typeof data.createdAt.toDate === "function"
-      ? data.createdAt.toDate().toISOString().slice(0, 10)
-      : null;
+    createdAtIso && createdAtIso.length >= 10 ? createdAtIso.slice(0, 10) : null;
+  const fromPublishedAt =
+    publishedAtIso && publishedAtIso.length >= 10 ? publishedAtIso.slice(0, 10) : null;
   const likedBy = data.likedBy && typeof data.likedBy === "object" ? data.likedBy : {};
   const savedBy = data.savedBy && typeof data.savedBy === "object" ? data.savedBy : {};
   const commentedBy = data.commentedBy && typeof data.commentedBy === "object" ? data.commentedBy : {};
@@ -62,7 +90,9 @@ export const mapFirestoreNews = (id, data = {}) => {
     title: data.title || "Untitled",
     category: data.category || "Academics",
     dept: data.dept || "All Departments",
-    date: data.date || fromCreatedAt || new Date().toISOString().slice(0, 10),
+    date: data.date || fromPublishedAt || fromCreatedAt || new Date().toISOString().slice(0, 10),
+    createdAt: createdAtIso,
+    publishedAt: publishedAtIso,
     author: data.author || "Unknown",
     authorId: data.authorId || "",
     authorRole: data.authorRole || "user",

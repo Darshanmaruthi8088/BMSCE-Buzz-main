@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../contexts/AppContext";
 import { getTheme } from "../services/theme";
@@ -21,6 +22,11 @@ const colorMap = {
 
 const monthTitleFormatter = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
 const monthShortFormatter = new Intl.DateTimeFormat(undefined, { month: "short" });
+const selectedDayLabelFormatter = new Intl.DateTimeFormat(undefined, {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
 
 const toDateValue = (value) => {
   if (!value) return null;
@@ -33,17 +39,27 @@ const normalizeToDay = (value) => new Date(value.getFullYear(), value.getMonth()
 const toMonthKey = (value) =>
   `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
 
+const toDateKey = (value) =>
+  `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+
+const dateKeyToDate = (value = "") => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const EventsScreen = () => {
+  const navigation = useNavigation();
   const { dark, events } = useApp();
   const insets = useSafeAreaInsets();
   const theme = useMemo(() => getTheme(dark), [dark]);
 
   const [view, setView] = useState("list");
-  const [savedEvents, setSavedEvents] = useState({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
 
   const sortedEvents = useMemo(
     () =>
@@ -79,6 +95,30 @@ const EventsScreen = () => {
     return map;
   }, [sortedEvents, theme.accent]);
 
+  const eventsByDate = useMemo(() => {
+    const map = {};
+    sortedEvents.forEach((event) => {
+      const start = toDateValue(event.startDateTime || event.date);
+      if (!start) return;
+      const end = toDateValue(event.endDateTime) || start;
+      const safeStart = normalizeToDay(start);
+      const safeEnd = normalizeToDay(end < start ? start : end);
+      for (let cursor = new Date(safeStart); cursor <= safeEnd; cursor.setDate(cursor.getDate() + 1)) {
+        const key = toDateKey(cursor);
+        if (!map[key]) map[key] = [];
+        map[key].push(event);
+      }
+    });
+    Object.keys(map).forEach((key) => {
+      map[key].sort((a, b) => {
+        const aStart = toDateValue(a.startDateTime || a.date) || new Date(0);
+        const bStart = toDateValue(b.startDateTime || b.date) || new Date(0);
+        return aStart.getTime() - bStart.getTime();
+      });
+    });
+    return map;
+  }, [sortedEvents]);
+
   const monthStart = useMemo(
     () => new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1),
     [calendarMonth]
@@ -87,16 +127,34 @@ const EventsScreen = () => {
   const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
   const highlightedDays = eventDaysByMonth[toMonthKey(monthStart)] || {};
 
+  const selectedDateObj = dateKeyToDate(selectedDateKey) || monthStart;
+  const selectedDayEvents = eventsByDate[selectedDateKey] || [];
+
   const goToPreviousMonth = () => {
-    setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setCalendarMonth((prev) => {
+      const next = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
+      setSelectedDateKey(toDateKey(next));
+      return next;
+    });
   };
 
   const goToNextMonth = () => {
-    setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setCalendarMonth((prev) => {
+      const next = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
+      setSelectedDateKey(toDateKey(next));
+      return next;
+    });
+  };
+
+  const openCreateEvent = () => {
+    navigation.navigate("Compose", {
+      initialDate: selectedDateKey,
+      presetCategory: "Cultural Events",
+    });
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}> 
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <View
         style={[
           styles.header,
@@ -106,10 +164,10 @@ const EventsScreen = () => {
             paddingTop: Math.max(12, insets.top + 8),
           },
         ]}
-      > 
+      >
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: theme.text }]}>Events</Text>
-          <View style={[styles.switchWrap, { backgroundColor: theme.input }]}> 
+          <View style={[styles.switchWrap, { backgroundColor: theme.input }]}>
             {[
               ["list", "List"],
               ["cal", "Calendar"],
@@ -128,7 +186,7 @@ const EventsScreen = () => {
 
       <ScrollView contentContainerStyle={styles.content}>
         {view === "cal" ? (
-          <View style={[styles.calendarCard, { backgroundColor: theme.card, borderColor: theme.border }]}> 
+          <View style={[styles.calendarCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.calendarTitleRow}>
               <Pressable
                 onPress={goToPreviousMonth}
@@ -159,14 +217,18 @@ const EventsScreen = () => {
                 const dayColors = Array.from(highlightedDays[day] || []);
                 const hasEvent = dayColors.length > 0;
                 const primaryColor = dayColors[0] || theme.accent;
+                const dayValue = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+                const dayKey = toDateKey(dayValue);
+                const isSelected = selectedDateKey === dayKey;
                 return (
-                  <View
+                  <Pressable
                     key={day}
+                    onPress={() => setSelectedDateKey(dayKey)}
                     style={[
                       styles.dayCell,
                       {
                         backgroundColor: hasEvent ? `${primaryColor}22` : theme.bg,
-                        borderColor: hasEvent ? `${primaryColor}66` : "transparent",
+                        borderColor: isSelected ? theme.accent : hasEvent ? `${primaryColor}66` : "transparent",
                       },
                     ]}
                   >
@@ -178,7 +240,7 @@ const EventsScreen = () => {
                         ))}
                       </View>
                     ) : null}
-                  </View>
+                  </Pressable>
                 );
               })}
             </View>
@@ -196,6 +258,37 @@ const EventsScreen = () => {
                 </View>
               ))}
             </View>
+
+            <View style={[styles.selectedDayCard, { borderColor: theme.border, backgroundColor: theme.card2 }]}>
+              <View style={styles.selectedDayHeader}>
+                <Text style={[styles.selectedDayTitle, { color: theme.text }]}>
+                  {selectedDayLabelFormatter.format(selectedDateObj)}
+                </Text>
+                <Pressable onPress={openCreateEvent} style={[styles.createBtn, { backgroundColor: theme.accent }]}>
+                  <Text style={styles.createBtnText}>Create Event</Text>
+                </Pressable>
+              </View>
+
+              {selectedDayEvents.length === 0 ? (
+                <Text style={[styles.selectedDayEmpty, { color: theme.text3 }]}>No events on this day.</Text>
+              ) : (
+                selectedDayEvents.map((event) => {
+                  const color = colorMap[event.color] || theme.accent;
+                  return (
+                    <View key={`${selectedDateKey}-${event.id}`} style={[styles.dayEventRow, { borderColor: theme.border }]}>
+                      <View style={[styles.dayEventDot, { backgroundColor: color }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.dayEventTitle, { color: theme.text }]}>{event.title}</Text>
+                        <Text style={[styles.dayEventMeta, { color: theme.text2 }]}>
+                          {event.time} | {event.venue}
+                        </Text>
+                      </View>
+                      <Badge text={event.category} color={color} small />
+                    </View>
+                  );
+                })
+              )}
+            </View>
           </View>
         ) : null}
 
@@ -211,8 +304,8 @@ const EventsScreen = () => {
           const startDate = toDateValue(event.startDateTime || event.date) || new Date();
           const color = colorMap[event.color] || theme.accent;
           return (
-            <View key={event.id} style={[styles.eventCard, { backgroundColor: theme.card, borderColor: theme.border }]}> 
-              <View style={[styles.dateBox, { backgroundColor: `${color}22` }]}> 
+            <View key={event.id} style={[styles.eventCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={[styles.dateBox, { backgroundColor: `${color}22` }]}>
                 <Text style={[styles.dateDay, { color }]}>{startDate.getDate()}</Text>
                 <Text style={[styles.dateMonth, { color }]}>{monthShortFormatter.format(startDate).toUpperCase()}</Text>
               </View>
@@ -225,14 +318,6 @@ const EventsScreen = () => {
               <View style={styles.eventActions}>
                 <Badge text={event.category} color={color} small />
                 {event.status === "pending" ? <Badge text="Pending" color="#B45309" small /> : null}
-                <Pressable
-                  onPress={() => setSavedEvents((prev) => ({ ...prev, [event.id]: !prev[event.id] }))}
-                  style={[styles.calendarBtn, { backgroundColor: `${theme.accent2}22` }]}
-                >
-                  <Text style={[styles.calendarBtnText, { color: theme.accent2 }]}>
-                    {savedEvents[event.id] ? "Added" : "+ Cal"}
-                  </Text>
-                </Pressable>
               </View>
             </View>
           );
@@ -371,6 +456,60 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
   },
+  selectedDayCard: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 9,
+  },
+  selectedDayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  selectedDayTitle: {
+    fontSize: 12.5,
+    fontWeight: "800",
+  },
+  createBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  createBtnText: {
+    color: "#FFFFFF",
+    fontSize: 10.5,
+    fontWeight: "800",
+  },
+  selectedDayEmpty: {
+    fontSize: 11.5,
+    fontWeight: "600",
+  },
+  dayEventRow: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dayEventDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dayEventTitle: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    marginBottom: 2,
+  },
+  dayEventMeta: {
+    fontSize: 10.5,
+    fontWeight: "500",
+  },
   upcomingLabel: {
     marginBottom: 10,
     fontSize: 11.5,
@@ -426,15 +565,6 @@ const styles = StyleSheet.create({
   eventActions: {
     alignItems: "flex-end",
     gap: 5,
-  },
-  calendarBtn: {
-    borderRadius: 6,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-  },
-  calendarBtnText: {
-    fontSize: 10,
-    fontWeight: "700",
   },
 });
 

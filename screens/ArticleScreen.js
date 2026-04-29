@@ -30,7 +30,7 @@ import { Badge, CategoryBadge } from "../components/Badge";
 import { useApp } from "../contexts/AppContext";
 import { db } from "../services/firebase";
 import { getTheme } from "../services/theme";
-import { relativeTime } from "../services/utils";
+import { formatPostReleaseDateTime, relativeTime } from "../services/utils";
 
 const ArticleScreen = () => {
   const navigation = useNavigation();
@@ -60,6 +60,7 @@ const ArticleScreen = () => {
         return {
           id: commentDoc.id,
           user: data.user || "User",
+          userId: data.userId || "",
           avatar: data.avatar || "U",
           avatarUrl: data.avatarUrl || "",
           text: data.text || "",
@@ -126,6 +127,15 @@ const ArticleScreen = () => {
     }
   };
 
+  const openCommentAuthorProfile = (commentItem) => {
+    navigation.navigate("UserProfile", {
+      userId: commentItem?.userId || "",
+      fallbackName: commentItem?.user || "User",
+      fallbackAvatar: commentItem?.avatar || "U",
+      fallbackAvatarUrl: commentItem?.avatarUrl || "",
+    });
+  };
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.bg }]}
@@ -186,7 +196,7 @@ const ArticleScreen = () => {
             <View style={{ flex: 1 }}>
               <Text style={[styles.authorName, { color: theme.text }]}>{item.author}</Text>
               <Text style={[styles.authorSub, { color: theme.text2 }]}> 
-                {item.date} | {item.dept}
+                Released: {formatPostReleaseDateTime(item)} | {item.dept}
               </Text>
             </View>
 
@@ -257,7 +267,7 @@ const ArticleScreen = () => {
           <Text style={[styles.commentsTitle, { color: theme.text }]}>Comments ({comments.length})</Text>
 
           {comments.map((commentItem) => (
-            <View key={commentItem.id} style={styles.commentRow}>
+            <Pressable key={commentItem.id} onPress={() => openCommentAuthorProfile(commentItem)} style={styles.commentRow}>
               <Avatar initials={commentItem.avatar} imageUrl={commentItem.avatarUrl} size={30} color="#7C3AED" />
               <View style={{ flex: 1 }}>
                 <View style={[styles.commentBubble, { backgroundColor: theme.card2 }]}> 
@@ -268,7 +278,7 @@ const ArticleScreen = () => {
                 </View>
                 <Text style={[styles.commentFooter, { color: theme.text3 }]}>Likes {commentItem.likes} | Reply</Text>
               </View>
-            </View>
+            </Pressable>
           ))}
 
           <View style={styles.commentInputRow}>

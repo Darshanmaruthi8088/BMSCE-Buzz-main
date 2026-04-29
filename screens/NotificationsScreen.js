@@ -60,12 +60,13 @@ const NotificationsScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {unreadNotifs.length === 0 ? (
-          <Text style={[styles.emptyText, { color: theme.text3 }]}>No new notifications.</Text>
+        {notifs.length === 0 ? (
+          <Text style={[styles.emptyText, { color: theme.text3 }]}>No notifications yet.</Text>
         ) : null}
 
-        {unreadNotifs.map((notif) => {
+        {notifs.map((notif) => {
           const color = NOTIFICATION_TYPE_COLORS[notif.type] || theme.accent;
+          const isUnread = !notif.read;
           return (
             <Pressable
               key={notif.id}
@@ -73,8 +74,8 @@ const NotificationsScreen = () => {
               style={[
                 styles.card,
                 {
-                  backgroundColor: `${color}14`,
-                  borderColor: `${color}55`,
+                  backgroundColor: isUnread ? `${color}14` : theme.card,
+                  borderColor: isUnread ? `${color}55` : theme.border,
                 },
               ]}
             >
@@ -83,13 +84,13 @@ const NotificationsScreen = () => {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: theme.text, fontWeight: "800" }]}>
+                <Text style={[styles.cardTitle, { color: theme.text, fontWeight: isUnread ? "800" : "700" }]}>
                   {notif.title}
                 </Text>
                 <Text style={[styles.cardTime, { color: theme.text3 }]}>{notif.time}</Text>
               </View>
 
-              <View style={[styles.dot, { backgroundColor: color }]} />
+              {isUnread ? <View style={[styles.dot, { backgroundColor: color }]} /> : null}
             </Pressable>
           );
         })}

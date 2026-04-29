@@ -8,6 +8,7 @@ import LoginScreen from "../screens/LoginScreen";
 import ArticleScreen from "../screens/ArticleScreen";
 import ComposeScreen from "../screens/ComposeScreen";
 import UserEditScreen from "../screens/UserEditScreen";
+import UserProfileScreen from "../screens/UserProfileScreen";
 import MainTabs from "./MainTabs";
 
 const Stack = createNativeStackNavigator();
@@ -62,6 +63,7 @@ const AppNavigator = () => {
               />
               <Stack.Screen name="Compose" component={ComposeScreen} />
               <Stack.Screen name="UserEdit" component={UserEditScreen} />
+              <Stack.Screen name="UserProfile" component={UserProfileScreen} />
             </>
           )}
         </Stack.Navigator>

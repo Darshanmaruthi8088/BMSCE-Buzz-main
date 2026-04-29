@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -15,7 +15,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Feather } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppButton from "../components/AppButton";
 import AppInput from "../components/AppInput";
@@ -24,8 +24,19 @@ import { useApp } from "../contexts/AppContext";
 import { CATEGORIES, DEPTS } from "../services/constants";
 import { getTheme } from "../services/theme";
 
-const createDefaultStartDate = () => {
-  const value = new Date();
+const toOptionalDate = (value) => {
+  if (!value) return null;
+  const parsed = value instanceof Date ? new Date(value) : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const createDefaultStartDate = (baseDate = null) => {
+  const parsedBase = toOptionalDate(baseDate);
+  const value = parsedBase || new Date();
+  if (parsedBase) {
+    value.setHours(9, 0, 0, 0);
+    return value;
+  }
   value.setMinutes(0, 0, 0);
   value.setHours(value.getHours() + 1);
   return value;
@@ -51,21 +62,40 @@ const formatTimeLabel = (value) =>
 
 const ComposeScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
   const { dark, user, publishPost } = useApp();
   const theme = useMemo(() => getTheme(dark), [dark]);
+  const { initialDate = "", presetCategory = "" } = route.params || {};
+  const prefilledDate = useMemo(() => toOptionalDate(initialDate), [initialDate]);
+  const prefilledCategory = useMemo(
+    () =>
+      CATEGORIES.includes(presetCategory) && presetCategory !== "All"
+        ? presetCategory
+        : "Academics",
+    [presetCategory]
+  );
+  const initialStartDate = useMemo(() => createDefaultStartDate(prefilledDate), [prefilledDate]);
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [category, setCategory] = useState("Academics");
+  const [category, setCategory] = useState(prefilledCategory);
   const [tags, setTags] = useState("");
   const [priority, setPriority] = useState("normal");
   const [step, setStep] = useState(1);
   const [coverImageName, setCoverImageName] = useState("");
   const [coverImageUri, setCoverImageUri] = useState("");
-  const [startDateTime, setStartDateTime] = useState(() => createDefaultStartDate());
-  const [endDateTime, setEndDateTime] = useState(() => createDefaultEndDate(createDefaultStartDate()));
+  const [startDateTime, setStartDateTime] = useState(() => initialStartDate);
+  const [endDateTime, setEndDateTime] = useState(() => createDefaultEndDate(initialStartDate));
   const [pickerConfig, setPickerConfig] = useState({ visible: false, mode: "date", target: "start" });
+
+  useEffect(() => {
+    if (!prefilledDate) return;
+    const nextStart = createDefaultStartDate(prefilledDate);
+    setStartDateTime(nextStart);
+    setEndDateTime(createDefaultEndDate(nextStart));
+    setCategory(prefilledCategory);
+  }, [prefilledCategory, prefilledDate]);
 
   const openDateTimePicker = (target, mode) => {
     setPickerConfig({ visible: true, target, mode });

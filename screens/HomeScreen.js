@@ -7,16 +7,15 @@ import {
   View,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AppHeader, { HeaderAction } from "../components/AppHeader";
 import NewsCard from "../components/NewsCard";
 import Avatar from "../components/Avatar";
-import { Badge, CategoryBadge } from "../components/Badge";
 import { useApp } from "../contexts/AppContext";
 import { CATEGORIES, DEPTS } from "../services/constants";
 import { getTheme } from "../services/theme";
-import { toViewCountLabel } from "../services/utils";
+import { getPostReleaseTimeMs } from "../services/utils";
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -47,12 +46,9 @@ const HomeScreen = () => {
         if (activeCat !== "All" && item.category !== activeCat) return false;
         if (filterDept !== "All Departments" && item.dept !== "All" && item.dept !== filterDept) return false;
         return true;
-      }),
+      }).sort((a, b) => getPostReleaseTimeMs(b) - getPostReleaseTimeMs(a)),
     [newsWithUser, activeCat, filterDept, isAdmin, user?.id]
   );
-
-  const featured = filtered[0];
-  const rest = filtered.slice(1);
 
   const openArticle = async (item) => {
     await incrementArticleViews(item);
@@ -119,57 +115,6 @@ const HomeScreen = () => {
           ))}
         </ScrollView>
 
-        {featured ? (
-          <View style={styles.featureWrap}>
-            <View style={styles.featureLabelRow}>
-              <Ionicons name="star" size={13} color={theme.accent} />
-              <Text style={[styles.featureLabel, { color: theme.accent }]}>Featured Story</Text>
-            </View>
-
-            <Pressable
-              onPress={() => openArticle(featured)}
-              style={[styles.featureCard, { backgroundColor: theme.card, borderColor: theme.border }]}
-            >
-              <View style={styles.featureBadges}>
-                <CategoryBadge category={featured.category} />
-                {featured.status === "pending" ? <Badge text="Pending Review" color="#B45309" /> : null}
-                {featured.priority === "urgent" ? <Badge text="Urgent" color="#DC2626" /> : null}
-              </View>
-
-              <Text style={[styles.featureTitle, { color: theme.text }]}>{featured.title}</Text>
-              <Text style={[styles.featureSummary, { color: theme.text2 }]} numberOfLines={3}>
-                {featured.summary}
-              </Text>
-
-              <View style={styles.featureFooter}>
-                <View style={styles.featureAuthorWrap}>
-                  <Avatar
-                    initials={featured.authorAvatar || featured.author?.split(" ").map((w) => w[0]).join("").slice(0, 2) || "U"}
-                    imageUrl={featured.authorAvatarUrl}
-                    size={24}
-                    color="#059669"
-                  />
-                  <View>
-                    <Text style={[styles.featureAuthorName, { color: theme.text }]}>{featured.author}</Text>
-                    <Text style={[styles.featureAuthorDate, { color: theme.text3 }]}>{featured.date}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.featureStats}>
-                  <View style={styles.featureStatItem}>
-                    <Feather name="eye" size={13} color={theme.text3} />
-                    <Text style={[styles.featureStatText, { color: theme.text3 }]}>{toViewCountLabel(featured.views)}</Text>
-                  </View>
-                  <View style={styles.featureStatItem}>
-                    <Ionicons name="heart-outline" size={13} color={theme.text3} />
-                    <Text style={[styles.featureStatText, { color: theme.text3 }]}>{featured.likes || 0}</Text>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-          </View>
-        ) : null}
-
         <View style={styles.latestHeader}>
           <View style={styles.latestTitleWrap}>
             <Ionicons name="trending-up" size={15} color={theme.accent} />
@@ -178,7 +123,7 @@ const HomeScreen = () => {
           <Text style={[styles.latestCount, { color: theme.text3 }]}>{filtered.length} articles</Text>
         </View>
 
-        {rest.map((item) => (
+        {filtered.map((item) => (
           <NewsCard
             key={item.id}
             item={item}
@@ -247,77 +192,6 @@ const styles = StyleSheet.create({
   categoryPillText: {
     fontSize: 11.5,
     fontWeight: "700",
-  },
-  featureWrap: {
-    marginTop: 12,
-  },
-  featureLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-  },
-  featureLabel: {
-    fontSize: 10.5,
-    fontWeight: "900",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  featureCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-    gap: 8,
-  },
-  featureBadges: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  featureTitle: {
-    fontSize: 19,
-    fontWeight: "900",
-    lineHeight: 25,
-    letterSpacing: -0.4,
-  },
-  featureSummary: {
-    fontSize: 12.5,
-    lineHeight: 19,
-  },
-  featureFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 4,
-  },
-  featureAuthorWrap: {
-    flexDirection: "row",
-    gap: 7,
-    alignItems: "center",
-  },
-  featureAuthorName: {
-    fontSize: 11.5,
-    fontWeight: "700",
-  },
-  featureAuthorDate: {
-    fontSize: 10,
-    fontWeight: "600",
-    marginTop: 1,
-  },
-  featureStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  featureStatItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  featureStatText: {
-    fontSize: 11,
-    fontWeight: "600",
   },
   latestHeader: {
     marginTop: 18,

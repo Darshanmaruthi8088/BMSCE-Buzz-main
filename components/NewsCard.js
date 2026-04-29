@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import Avatar from "./Avatar";
 import { Badge, CategoryBadge } from "./Badge";
-import { toViewCountLabel } from "../services/utils";
+import { formatPostReleaseDateTime, toViewCountLabel } from "../services/utils";
 
 const NewsCard = ({
   item,
@@ -70,7 +70,7 @@ const NewsCard = ({
             color="#3B82F6"
           />
           <Text style={[styles.authorText, { color: theme.text2 }]} numberOfLines={1}>
-            {item.author}  {item.date?.slice(5)?.replace("-", "/")}
+            {item.author}  {formatPostReleaseDateTime(item)}
           </Text>
         </View>
 

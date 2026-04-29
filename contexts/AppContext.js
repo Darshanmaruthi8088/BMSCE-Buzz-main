@@ -42,6 +42,7 @@ import {
 import {
   deriveNameFromEmail,
   getInitials,
+  getPostReleaseTimeMs,
   mapFirestoreNews,
   mapFirestoreNotif,
   normalizeAudienceRoles,
@@ -136,6 +137,9 @@ const toDateValue = (value) => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+
+const sortNewsByNewest = (items = []) =>
+  [...items].sort((a, b) => getPostReleaseTimeMs(b) - getPostReleaseTimeMs(a));
 
 const formatEventTimeRange = (startIso, endIso) => {
   const start = toDateValue(startIso);
@@ -389,9 +393,9 @@ export const AppProvider = ({ children }) => {
     const unsubscribe = onSnapshot(
       collection(db, "news"),
       (snapshot) => {
-        const remoteNews = snapshot.docs
-          .map((newsDoc) => mapFirestoreNews(newsDoc.id, newsDoc.data()))
-          .sort((a, b) => b.date.localeCompare(a.date));
+        const remoteNews = sortNewsByNewest(
+          snapshot.docs.map((newsDoc) => mapFirestoreNews(newsDoc.id, newsDoc.data()))
+        );
         setNews(remoteNews);
       },
       (error) => {
@@ -471,9 +475,7 @@ export const AppProvider = ({ children }) => {
             ) {
               return null;
             }
-            const mappedNotif = mapFirestoreNotif(notifDoc.id, data, user.id, !!readOverrides[notifDoc.id]);
-            if (mappedNotif.read) return null;
-            return mappedNotif;
+            return mapFirestoreNotif(notifDoc.id, data, user.id, !!readOverrides[notifDoc.id]);
           })
           .filter(Boolean)
           .sort((a, b) => b.createdAtMs - a.createdAtMs);
@@ -1164,6 +1166,8 @@ export const AppProvider = ({ children }) => {
       coverImage,
       summary: (data.body || "").slice(0, 160),
       date: startDateTime.slice(0, 10),
+      createdAt: new Date().toISOString(),
+      publishedAt: isUserPost ? null : new Date().toISOString(),
       startDateTime,
       endDateTime,
     };
@@ -1173,7 +1177,11 @@ export const AppProvider = ({ children }) => {
 
     if (useFirebaseBackend) {
       try {
-        await addDoc(collection(db, "news"), { ...payload, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "news"), {
+          ...payload,
+          createdAt: serverTimestamp(),
+          publishedAt: isUserPost ? null : serverTimestamp(),
+        });
         if (isUserPost) {
           await createNotification({
             title: `New ${payload.category} post pending review: ${payload.title}`,
@@ -1192,7 +1200,7 @@ export const AppProvider = ({ children }) => {
       return true;
     }
 
-    setNews((prev) => [...prev, payload]);
+    setNews((prev) => sortNewsByNewest([...prev, payload]));
     return true;
   };
 
@@ -1201,13 +1209,22 @@ export const AppProvider = ({ children }) => {
     const target = news.find((item) => item.id === id);
     if (useFirebaseBackend) {
       try {
-        await updateDoc(doc(db, "news", id), { status: "published" });
+        await updateDoc(doc(db, "news", id), {
+          status: "published",
+          publishedAt: serverTimestamp(),
+        });
       } catch (error) {
         console.error("Failed to approve post:", error);
         return false;
       }
     } else {
-      setNews((prev) => prev.map((item) => (item.id === id ? { ...item, status: "published" } : item)));
+      setNews((prev) =>
+        sortNewsByNewest(
+          prev.map((item) =>
+            item.id === id ? { ...item, status: "published", publishedAt: new Date().toISOString() } : item
+          )
+        )
+      );
     }
 
     if (target) {
@@ -1379,7 +1396,9 @@ export const AppProvider = ({ children }) => {
     }, {});
     if (!Object.keys(readMapPatch).length) return;
 
-    setNotifs((prev) => prev.filter((item) => !readMapPatch[item.id]));
+    setNotifs((prev) =>
+      prev.map((item) => (readMapPatch[item.id] ? { ...item, read: true } : item))
+    );
     setUser((prev) =>
       prev
         ? {
