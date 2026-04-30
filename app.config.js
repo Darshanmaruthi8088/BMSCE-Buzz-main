@@ -1,9 +1,59 @@
+const fs = require("fs");
+const path = require("path");
+
 const normalizeBooleanString = (value = "false") =>
   String(value || "")
     .trim()
     .toLowerCase() === "true";
 
+const loadDotEnv = () => {
+  try {
+    const envPath = path.resolve(__dirname, ".env");
+    if (!fs.existsSync(envPath)) return;
+    const raw = fs.readFileSync(envPath, "utf8");
+    raw.split(/\r?\n/).forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) return;
+      const [key, ...valueParts] = trimmed.split("=");
+      if (!key) return;
+      const value = valueParts.join("=").trim();
+      if (typeof process.env[key] === "undefined") {
+        process.env[key] = value;
+      }
+    });
+  } catch {
+    // Ignore parse errors and continue using existing env values.
+  }
+};
+
+const loadGoogleServicesConfig = () => {
+  try {
+    const servicesPath = path.resolve(__dirname, "google-services.json");
+    if (!fs.existsSync(servicesPath)) return {};
+    const raw = fs.readFileSync(servicesPath, "utf8");
+    const config = JSON.parse(raw);
+    const projectInfo = config.project_info || {};
+    const client = Array.isArray(config.client) ? config.client[0] : null;
+    const apiKey = client?.api_key?.[0]?.current_key || "";
+    const appId = client?.client_info?.mobilesdk_app_id || "";
+    const projectId = projectInfo.project_id || "";
+    return {
+      REACT_APP_FIREBASE_API_KEY: apiKey,
+      REACT_APP_FIREBASE_AUTH_DOMAIN: projectId ? `${projectId}.firebaseapp.com` : "",
+      REACT_APP_FIREBASE_PROJECT_ID: projectId,
+      REACT_APP_FIREBASE_STORAGE_BUCKET: projectInfo.storage_bucket || "",
+      REACT_APP_FIREBASE_MESSAGING_SENDER_ID: projectInfo.project_number || "",
+      REACT_APP_FIREBASE_APP_ID: appId,
+    };
+  } catch {
+    return {};
+  }
+};
+
+loadDotEnv();
+
 export default ({ config }) => {
+  const googleServicesValues = loadGoogleServicesConfig();
   const nativePushFlag =
     process.env.REACT_APP_ENABLE_NATIVE_PUSH ||
     config?.extra?.REACT_APP_ENABLE_NATIVE_PUSH ||
@@ -44,12 +94,18 @@ export default ({ config }) => {
     },
     plugins: ["expo-font", "@react-native-community/datetimepicker", "expo-notifications"],
     extra: {
-      REACT_APP_FIREBASE_API_KEY: process.env.REACT_APP_FIREBASE_API_KEY || "",
-      REACT_APP_FIREBASE_AUTH_DOMAIN: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "",
-      REACT_APP_FIREBASE_PROJECT_ID: process.env.REACT_APP_FIREBASE_PROJECT_ID || "",
-      REACT_APP_FIREBASE_STORAGE_BUCKET: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "",
-      REACT_APP_FIREBASE_MESSAGING_SENDER_ID: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "",
-      REACT_APP_FIREBASE_APP_ID: process.env.REACT_APP_FIREBASE_APP_ID || "",
+      REACT_APP_FIREBASE_API_KEY:
+        process.env.REACT_APP_FIREBASE_API_KEY || googleServicesValues.REACT_APP_FIREBASE_API_KEY || "",
+      REACT_APP_FIREBASE_AUTH_DOMAIN:
+        process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || googleServicesValues.REACT_APP_FIREBASE_AUTH_DOMAIN || "",
+      REACT_APP_FIREBASE_PROJECT_ID:
+        process.env.REACT_APP_FIREBASE_PROJECT_ID || googleServicesValues.REACT_APP_FIREBASE_PROJECT_ID || "",
+      REACT_APP_FIREBASE_STORAGE_BUCKET:
+        process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || googleServicesValues.REACT_APP_FIREBASE_STORAGE_BUCKET || "",
+      REACT_APP_FIREBASE_MESSAGING_SENDER_ID:
+        process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || googleServicesValues.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "",
+      REACT_APP_FIREBASE_APP_ID:
+        process.env.REACT_APP_FIREBASE_APP_ID || googleServicesValues.REACT_APP_FIREBASE_APP_ID || "",
       REACT_APP_FIREBASE_VAPID_KEY: process.env.REACT_APP_FIREBASE_VAPID_KEY || "",
       REACT_APP_ENABLE_NATIVE_PUSH: nativePushEnabled ? "true" : "false",
       eas: {
