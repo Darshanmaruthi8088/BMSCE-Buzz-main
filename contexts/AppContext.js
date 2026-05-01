@@ -389,7 +389,11 @@ export const AppProvider = ({ children }) => {
   }, [news, user?.id]);
 
   useEffect(() => {
-    if (!useFirebaseBackend) return undefined;
+    if (!useFirebaseBackend || !db || !user?.id) {
+      setNews(LOCAL_NEWS);
+      return undefined;
+    }
+
     const unsubscribe = onSnapshot(
       collection(db, "news"),
       (snapshot) => {
@@ -403,10 +407,14 @@ export const AppProvider = ({ children }) => {
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!useFirebaseBackend) return undefined;
+    if (!useFirebaseBackend || !db || !user?.id) {
+      setUsers([]);
+      return undefined;
+    }
+
     const unsubscribe = onSnapshot(
       collection(db, "users"),
       (snapshot) => {
@@ -436,7 +444,7 @@ export const AppProvider = ({ children }) => {
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) {
