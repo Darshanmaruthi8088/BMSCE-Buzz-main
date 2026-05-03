@@ -15,8 +15,11 @@ const extraConfig =
 
 const readEnv = (...keys) => {
   for (const key of keys) {
+    const fromExtra = extraConfig?.[key];
+    if (fromExtra !== undefined && fromExtra !== null && String(fromExtra).trim() !== "") {
+      return fromExtra;
+    }
     if (typeof process !== "undefined" && process?.env?.[key]) return process.env[key];
-    if (extraConfig?.[key]) return extraConfig[key];
   }
   return "";
 };
@@ -37,6 +40,26 @@ const firebaseConfig = {
 
 export const isFirebaseConfigured = Object.values(firebaseConfig).every(Boolean);
 
+const initAuthForCurrentPlatform = (firebaseApp) => {
+  if (Platform.OS === "web") {
+    return getAuth(firebaseApp);
+  }
+  try {
+    const { initializeAuth, getReactNativePersistence } = require("firebase/auth");
+    const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+    return initializeAuth(firebaseApp, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch (error) {
+    const code = String(error?.code || "").trim();
+    if (code === "auth/already-initialized") {
+      return getAuth(firebaseApp);
+    }
+    console.warn("Firebase Auth: falling back to getAuth without explicit persistence:", error?.message || error);
+    return getAuth(firebaseApp);
+  }
+};
+
 const normalizeStorageBucketName = (value = "") => {
   const trimmed = String(value || "").trim();
   if (!trimmed) return "";
@@ -53,7 +76,7 @@ let uploadStorageTargets = [];
 
 if (isFirebaseConfigured) {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  auth = getAuth(app);
+  auth = initAuthForCurrentPlatform(app);
   db = getFirestore(app);
   storage = getStorage(app);
 

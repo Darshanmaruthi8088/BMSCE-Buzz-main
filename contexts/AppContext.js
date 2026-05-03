@@ -19,6 +19,7 @@ import {
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
@@ -653,6 +654,72 @@ export const AppProvider = ({ children }) => {
       cacheAvatarUrlForUser(resolvedUserId, nextAvatarUrl);
     }
   };
+
+  useEffect(() => {
+    if (!useFirebaseBackend || !auth || !db) {
+      return undefined;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        return;
+      }
+
+      try {
+        const userRef = doc(db, "users", firebaseUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+          // Sign-up flow may create the Auth user before the Firestore profile write finishes.
+          return;
+        }
+
+        const stored = userSnap.data() || {};
+        const email = normalizeEmail(stored.email || firebaseUser.email || "");
+        if (!email) {
+          return;
+        }
+
+        const storedRole = normalizeRole(stored.role || "user", email);
+        const selectedRole = USERS[storedRole] || USERS.user;
+        const finalName = stored.name || deriveNameFromEmail(email) || selectedRole.name;
+
+        const profileData = {
+          role: storedRole,
+          userType: normalizeUserType(storedRole, stored.userType || "student"),
+          name: finalName,
+          email,
+          avatar: stored.avatar || getInitials(finalName),
+          avatarUrl: stored.avatarUrl || "",
+          dept: storedRole === "admin" ? PRIMARY_ADMIN.dept : stored.dept || selectedRole.dept,
+          year:
+            storedRole === "user"
+              ? typeof stored.year === "undefined"
+                ? selectedRole.year || null
+                : stored.year
+              : null,
+          usn:
+            storedRole === "user"
+              ? typeof stored.usn === "undefined"
+                ? selectedRole.usn || null
+                : stored.usn
+              : null,
+          readNotificationIds: normalizeReadNotificationIds(stored.readNotificationIds),
+          notificationCutoffAtMs:
+            normalizeNotificationCutoffMs(stored.notificationCutoffAtMs) || Date.now(),
+        };
+
+        onLogin({ uid: firebaseUser.uid, ...profileData });
+      } catch (error) {
+        console.error("Failed to restore auth session:", error);
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Firebase auth restore runs once; onLogin/setUser are stable enough for session bootstrap.
+  }, []);
 
   const authenticate = async ({
     mode,
