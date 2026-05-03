@@ -40,9 +40,11 @@ import {
   STUDY_YEARS,
   USERS,
 } from "../services/constants";
+import { deleteNewsDocAndComments, listExpiredNewsIdsForUser } from "../services/newsExpiry";
 import {
   deriveNameFromEmail,
   getInitials,
+  getPostEndTimeMs,
   getPostReleaseTimeMs,
   mapFirestoreNews,
   mapFirestoreNotif,
@@ -278,8 +280,61 @@ export const AppProvider = ({ children }) => {
   const likedArticleLocksRef = useRef(new Set());
   const repairedAvatarUrisRef = useRef(new Set());
   const repairedPostImageUrisRef = useRef(new Set());
+  const expiryPurgeInFlightRef = useRef(false);
+  const newsRef = useRef(news);
 
   const isAdmin = isPrimaryAdminSession(user);
+  newsRef.current = news;
+
+  useEffect(() => {
+    if (useFirebaseBackend) {
+      return undefined;
+    }
+    const pruneLocalExpired = () => {
+      const now = Date.now();
+      setNews((prev) =>
+        prev.filter((item) => {
+          const endMs = getPostEndTimeMs(item);
+          if (endMs == null) return true;
+          return endMs > now;
+        })
+      );
+    };
+    pruneLocalExpired();
+    const interval = setInterval(pruneLocalExpired, 60_000);
+    return () => clearInterval(interval);
+  }, [useFirebaseBackend]);
+
+  useEffect(() => {
+    if (!useFirebaseBackend || !db || !user?.id) {
+      return undefined;
+    }
+
+    const runExpiryPurge = async () => {
+      if (expiryPurgeInFlightRef.current) return;
+      const ids = listExpiredNewsIdsForUser(newsRef.current, user.id, isAdmin, Date.now());
+      if (!ids.length) return;
+
+      expiryPurgeInFlightRef.current = true;
+      try {
+        for (const newsId of ids) {
+          try {
+            await deleteNewsDocAndComments(db, newsId);
+          } catch (error) {
+            const code = String(error?.code || "").toLowerCase();
+            if (code.includes("not-found") || code.includes("permission-denied")) continue;
+            console.warn("Failed to delete expired news:", newsId, error);
+          }
+        }
+      } finally {
+        expiryPurgeInFlightRef.current = false;
+      }
+    };
+
+    runExpiryPurge();
+    const interval = setInterval(runExpiryPurge, 60_000);
+    return () => clearInterval(interval);
+  }, [useFirebaseBackend, db, user?.id, isAdmin, news]);
 
   useEffect(() => {
     viewedArticleLocksRef.current = new Set();

@@ -58,6 +58,18 @@ export const getPostReleaseDate = (post = {}) =>
 
 export const getPostReleaseTimeMs = (post = {}) => getPostReleaseDate(post)?.getTime() || 0;
 
+/** Milliseconds at post end (scheduled expiry). Null if missing or invalid — those posts are never auto-deleted. */
+export const getPostEndTimeMs = (post = {}) => {
+  const parsed = toDateLike(post?.endDateTime);
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.getTime() : null;
+};
+
+export const isPostPastEndTime = (post = {}, nowMs = Date.now()) => {
+  const endMs = getPostEndTimeMs(post);
+  if (endMs == null) return false;
+  return nowMs > endMs;
+};
+
 export const formatPostReleaseDateTime = (post = {}) => {
   const value = getPostReleaseDate(post);
   if (!value) return "Unknown";

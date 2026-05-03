@@ -55,6 +55,8 @@ const HomeScreen = () => {
     navigation.navigate("Article", { articleId: item.id });
   };
 
+  const openContactUs = () => navigation.navigate("ContactUs");
+
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <AppHeader
@@ -90,6 +92,20 @@ const HomeScreen = () => {
       ) : null}
 
       <ScrollView contentContainerStyle={styles.content}>
+        <Pressable
+          onPress={openContactUs}
+          style={[styles.contactBanner, { borderColor: theme.border, backgroundColor: theme.card }]}
+        >
+          <View style={[styles.contactIconWrap, { backgroundColor: `${theme.accent}1A` }]}>
+            <Ionicons name="people" size={20} color={theme.accent} />
+          </View>
+          <View style={styles.contactBannerText}>
+            <Text style={[styles.contactBannerTitle, { color: theme.text }]}>Contact us</Text>
+            <Text style={[styles.contactBannerSub, { color: theme.text2 }]}>Meet the creators</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.text3} />
+        </Pressable>
+
         {importantNotice ? (
           <Pressable style={styles.notice} onPress={() => openArticle(importantNotice)}>
             <Ionicons name="flash" size={16} color="#FCD34D" />
@@ -161,6 +177,36 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 14,
     paddingBottom: 110,
+  },
+  contactBanner: {
+    marginTop: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  contactIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contactBannerText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  contactBannerTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  contactBannerSub: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: "600",
   },
   notice: {
     marginTop: 12,
