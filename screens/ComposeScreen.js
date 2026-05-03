@@ -162,6 +162,9 @@ const ComposeScreen = () => {
     });
 
     if (ok) {
+      if (user?.role === "user") {
+        Alert.alert("Success", "Your post has been submitted and is pending admin approval.");
+      }
       navigation.goBack();
       return;
     }

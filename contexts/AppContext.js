@@ -803,7 +803,7 @@ export const AppProvider = ({ children }) => {
     const adminLoginAttempt = tab === "login" && requestedRole === "admin";
 
     if (!trimmedEmail) return { ok: false, message: "Enter your college email." };
-    if (requestedRole !== "admin" && !trimmedEmail.includes("bmsce")) {
+    if (tab === "signup" && requestedRole !== "admin" && !trimmedEmail.includes("bmsce")) {
       return { ok: false, message: "Enter college email id." };
     }
     if (!trimmedPassword) return { ok: false, message: "Enter your password." };
