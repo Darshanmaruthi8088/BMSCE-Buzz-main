@@ -66,6 +66,7 @@ const normalizeUserType = (role, userType = "student") =>
   role === "user" ? (userType === "faculty" ? "faculty" : "student") : null;
 const isPrimaryAdminSession = (profile) =>
   normalizeRole(profile?.role, profile?.email) === "admin";
+
 const AVATAR_CACHE_FILE =
   FileSystem.documentDirectory || FileSystem.cacheDirectory
     ? `${FileSystem.documentDirectory || FileSystem.cacheDirectory}avatar-cache.json`
@@ -802,6 +803,9 @@ export const AppProvider = ({ children }) => {
     const adminLoginAttempt = tab === "login" && requestedRole === "admin";
 
     if (!trimmedEmail) return { ok: false, message: "Enter your college email." };
+    if (requestedRole !== "admin" && !trimmedEmail.includes("bmsce")) {
+      return { ok: false, message: "Enter college email id." };
+    }
     if (!trimmedPassword) return { ok: false, message: "Enter your password." };
     if (tab === "signup" && requestedRole === "admin") {
       return { ok: false, message: "Admin account creation is disabled. Use Sign In for the existing admin account." };
@@ -1078,6 +1082,21 @@ export const AppProvider = ({ children }) => {
     if (!trimmedFavoriteSport) return { ok: false, message: "Enter your favorite sport answer." };
     if (!useFirebaseBackend || !db) {
       return { ok: false, message: "Firebase is not configured. Password recovery is unavailable." };
+    }
+
+    if (isAdminRecovery) {
+      const storedName = PRIMARY_ADMIN_NAME;
+      const storedNickname = normalizeRecoveryAnswer(PRIMARY_ADMIN.nickname);
+      const storedFavoriteSport = normalizeRecoveryAnswer(PRIMARY_ADMIN.favoriteSport);
+
+      if (
+        storedName === trimmedName &&
+        storedNickname === trimmedNickname &&
+        storedFavoriteSport === trimmedFavoriteSport
+      ) {
+        return { ok: true, message: `Your password is: ${PRIMARY_ADMIN.password}` };
+      }
+      return { ok: false, message: "Recovery details did not match. Please check and try again." };
     }
 
     try {
