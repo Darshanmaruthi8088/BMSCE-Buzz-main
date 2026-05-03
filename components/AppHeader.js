@@ -44,7 +44,15 @@ const AppHeader = ({
 
         <View style={styles.rightWrap}>
           {rightActions}
-          {avatar ? <Avatar initials={avatar.initials} imageUrl={avatar.imageUrl} size={34} color="#F59E0B" /> : null}
+          {avatar ? (
+            <Avatar
+              initials={avatar.initials}
+              imageUrl={avatar.imageUrl}
+              size={34}
+              color="#F59E0B"
+              enablePreview={false}
+            />
+          ) : null}
         </View>
       </View>
     </View>

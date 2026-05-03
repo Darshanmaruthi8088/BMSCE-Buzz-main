@@ -1068,10 +1068,11 @@ export const AppProvider = ({ children }) => {
     const trimmedUsn = (payload.usn || "").trim().toUpperCase();
     const trimmedNickname = normalizeRecoveryAnswer(payload.nickname || "");
     const trimmedFavoriteSport = normalizeRecoveryAnswer(payload.favoriteSport || "");
+    const isAdminRecovery = trimmedEmail === PRIMARY_ADMIN_EMAIL;
 
     if (!trimmedEmail) return { ok: false, message: "Enter email for forgot password." };
     if (!trimmedName) return { ok: false, message: "Enter full name for forgot password." };
-    if (!trimmedUsn) return { ok: false, message: "Enter USN for forgot password." };
+    if (!isAdminRecovery && !trimmedUsn) return { ok: false, message: "Enter USN for forgot password." };
     if (!trimmedNickname) return { ok: false, message: "Enter your nickname answer." };
     if (!trimmedFavoriteSport) return { ok: false, message: "Enter your favorite sport answer." };
     if (!useFirebaseBackend || !db) {
@@ -1092,7 +1093,7 @@ export const AppProvider = ({ children }) => {
         const storedFavoriteSport = normalizeRecoveryAnswer(data.securityFavoriteSport || "");
         return (
           storedName === trimmedName &&
-          storedUsn === trimmedUsn &&
+          (isAdminRecovery || storedUsn === trimmedUsn) &&
           storedNickname === trimmedNickname &&
           storedFavoriteSport === trimmedFavoriteSport
         );
@@ -1269,14 +1270,15 @@ export const AppProvider = ({ children }) => {
         uri: data.coverImageUri,
         pathPrefix: `posts/${user.id}`,
         fileName: coverImageName,
-        allowLocalFallback: true,
+        allowLocalFallback: !useFirebaseBackend,
+        throwOnFailure: !!useFirebaseBackend,
       });
       if (!coverImage) return false;
+      if (useFirebaseBackend && !/^https?:\/\//i.test(String(coverImage))) return false;
     }
 
     const payload = {
       id: `n${Date.now()}`,
-      status: isUserPost ? "pending" : "published",
       views: 0,
       likes: 0,
       comments: 0,
@@ -1293,6 +1295,7 @@ export const AppProvider = ({ children }) => {
       authorAvatar: user.avatar || getInitials(user.name || "User"),
       authorAvatarUrl: user.avatarUrl || "",
       ...data,
+      status: isUserPost ? "pending" : "published",
       coverImage,
       summary: (data.body || "").slice(0, 160),
       date: startDateTime.slice(0, 10),
@@ -1750,8 +1753,7 @@ export const AppProvider = ({ children }) => {
       newsWithUser
         .filter(
           (item) =>
-            (item.status === "published" ||
-              (item.status === "pending" && (isAdmin || (user?.id && item.authorId === user.id)))) &&
+            item.status === "published" &&
             ["Cultural Events", "Sports", "Exams", "Academics"].includes(item.category)
         )
         .map((item) => ({

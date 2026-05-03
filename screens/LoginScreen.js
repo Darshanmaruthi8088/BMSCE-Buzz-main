@@ -315,15 +315,17 @@ const LoginScreen = () => {
                   style={styles.inputGap}
                 />
 
-                <AppInput
-                  label="USN"
-                  value={forgotUsn}
-                  onChangeText={(value) => setForgotUsn(value.toUpperCase())}
-                  placeholder="1BM24CS001"
-                  autoCapitalize="characters"
-                  theme={theme}
-                  style={styles.inputGap}
-                />
+                {role === "user" ? (
+                  <AppInput
+                    label="USN"
+                    value={forgotUsn}
+                    onChangeText={(value) => setForgotUsn(value.toUpperCase())}
+                    placeholder="1BM24CS001"
+                    autoCapitalize="characters"
+                    theme={theme}
+                    style={styles.inputGap}
+                  />
+                ) : null}
 
                 <AppInput
                   label="What Is Your Nickname?"

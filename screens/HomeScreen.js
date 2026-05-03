@@ -39,15 +39,13 @@ const HomeScreen = () => {
   const filtered = useMemo(
     () =>
       newsWithUser.filter((item) => {
-        const canViewItem =
-          item.status === "published" ||
-          (item.status === "pending" && (isAdmin || item.authorId === user?.id));
+        const canViewItem = item.status === "published";
         if (!canViewItem) return false;
         if (activeCat !== "All" && item.category !== activeCat) return false;
         if (filterDept !== "All Departments" && item.dept !== "All" && item.dept !== filterDept) return false;
         return true;
       }).sort((a, b) => getPostReleaseTimeMs(b) - getPostReleaseTimeMs(a)),
-    [newsWithUser, activeCat, filterDept, isAdmin, user?.id]
+    [newsWithUser, activeCat, filterDept]
   );
 
   const openArticle = async (item) => {
@@ -68,7 +66,7 @@ const HomeScreen = () => {
             <HeaderAction theme={theme} icon={dark ? "sunny" : "moon"} onPress={toggleDark} />
             <HeaderAction theme={theme} icon="filter" onPress={() => setShowFilter((prev) => !prev)} active={showFilter} />
             <Pressable onPress={() => navigation.navigate("Profile")}> 
-              <Avatar initials={user?.avatar} imageUrl={user?.avatarUrl} size={34} />
+              <Avatar initials={user?.avatar} imageUrl={user?.avatarUrl} size={34} enablePreview={false} />
             </Pressable>
           </>
         }

@@ -31,9 +31,7 @@ const SearchScreen = () => {
 
   const newsResults = useMemo(() => {
     return newsWithUser.filter((item) => {
-      const canViewItem =
-        item.status === "published" ||
-        (item.status === "pending" && (isAdmin || item.authorId === user?.id));
+      const canViewItem = item.status === "published";
       if (!canViewItem) return false;
       const matchQuery =
         !normalizedQuery ||
@@ -44,7 +42,7 @@ const SearchScreen = () => {
         item.tags?.some((tag) => tag.toLowerCase().includes(normalizedQuery));
       return matchQuery && (category === "All" || item.category === category);
     });
-  }, [newsWithUser, normalizedQuery, category, isAdmin, user?.id]);
+  }, [newsWithUser, normalizedQuery, category]);
 
   const userResults = useMemo(() => {
     if (!normalizedQuery) return [];

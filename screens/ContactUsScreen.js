@@ -31,7 +31,7 @@ const CREATORS = [
     name: "Darshan PN",
     email: "darshanpn.cs24@bmsce.ac.in",
     initials: "DP",
-    usePlaceholderLogo: true,
+    photo: require("../assets/creators/Darshan pn.jpg.jpeg"),
   },
   {
     id: "aneesh-ts",
