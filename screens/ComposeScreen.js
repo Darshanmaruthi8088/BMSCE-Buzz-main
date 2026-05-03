@@ -146,29 +146,39 @@ const ComposeScreen = () => {
       return;
     }
 
-    const ok = await publishPost({
-      title,
-      body,
-      category,
-      tags: tags
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      priority,
-      coverImageUri,
-      coverImageName,
-      startDateTime: startDateTime.toISOString(),
-      endDateTime: endDateTime.toISOString(),
-    });
+    try {
+      const ok = await publishPost({
+        title,
+        body,
+        category,
+        tags: tags
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        priority,
+        coverImageUri,
+        coverImageName,
+        startDateTime: startDateTime.toISOString(),
+        endDateTime: endDateTime.toISOString(),
+      });
 
-    if (ok) {
-      if (user?.role === "user") {
-        Alert.alert("Success", "Your post has been submitted and is pending admin approval.");
+      if (ok) {
+        if (user?.role === "user") {
+          Alert.alert(
+            "Success",
+            "Your post has been submitted and is pending admin approval.",
+            [{ text: "OK", onPress: () => navigation.goBack() }]
+          );
+          return;
+        }
+        navigation.goBack();
+        return;
       }
-      navigation.goBack();
-      return;
+      Alert.alert("Publish failed", "Please check your connection and try again.");
+    } catch (error) {
+      console.error("ComposeScreen submit error:", error);
+      Alert.alert("Error", "An unexpected error occurred while submitting.");
     }
-    Alert.alert("Publish failed", "Image upload failed. Please check your connection and try again.");
   };
 
   const pickCoverImage = async () => {

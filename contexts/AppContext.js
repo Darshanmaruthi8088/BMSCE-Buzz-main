@@ -1286,15 +1286,20 @@ export const AppProvider = ({ children }) => {
     const endDateTime = parsedEndDateTime.toISOString();
 
     if (data?.coverImageUri) {
-      coverImage = await uploadImageAsync({
-        uri: data.coverImageUri,
-        pathPrefix: `posts/${user.id}`,
-        fileName: coverImageName,
-        allowLocalFallback: !useFirebaseBackend,
-        throwOnFailure: !!useFirebaseBackend,
-      });
-      if (!coverImage) return false;
-      if (useFirebaseBackend && !/^https?:\/\//i.test(String(coverImage))) return false;
+      try {
+        coverImage = await uploadImageAsync({
+          uri: data.coverImageUri,
+          pathPrefix: `posts/${user.id}`,
+          fileName: coverImageName,
+          allowLocalFallback: !useFirebaseBackend,
+          throwOnFailure: !!useFirebaseBackend,
+        });
+        if (!coverImage) return false;
+        if (useFirebaseBackend && !/^https?:\/\//i.test(String(coverImage))) return false;
+      } catch (error) {
+        console.error("Cover image upload failed:", error);
+        return false;
+      }
     }
 
     const payload = {
