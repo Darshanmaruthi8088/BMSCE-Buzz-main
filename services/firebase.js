@@ -297,7 +297,37 @@ export const uploadImageAsync = async ({
         });
         if (!base64) throw new Error("Image file is empty.");
         const contentType = getContentType(ext, "");
-        await uploadString(storageRef, base64, "base64", { contentType });
+        
+        const idToken = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
+        const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${target.bucket}/o?name=${encodeURIComponent(objectPath)}`;
+        
+        const dataUri = `data:${contentType};base64,${base64}`;
+        const dataBlob = await (await fetch(dataUri)).blob();
+        
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": contentType,
+            ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+          },
+          body: dataBlob,
+        });
+        
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`REST upload failed (${response.status}): ${text}`);
+        }
+        
+        try {
+          const metadata = await response.json();
+          if (metadata?.downloadTokens) {
+            const token = metadata.downloadTokens.split(',')[0];
+            return `https://firebasestorage.googleapis.com/v0/b/${target.bucket}/o/${encodeURIComponent(objectPath)}?alt=media&token=${token}`;
+          }
+        } catch (e) {
+          // Ignore JSON parse error
+        }
+        
         return await getDownloadURL(storageRef);
       } catch (fallbackError) {
         lastError = fallbackError || error;
