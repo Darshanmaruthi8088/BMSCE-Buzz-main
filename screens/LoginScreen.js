@@ -35,6 +35,7 @@ const LoginScreen = () => {
   const [nickname, setNickname] = useState("");
   const [favoriteSport, setFavoriteSport] = useState("");
   const [forgotName, setForgotName] = useState("");
+  const [forgotUserType, setForgotUserType] = useState("student");
   const [forgotUsn, setForgotUsn] = useState("");
   const [forgotNickname, setForgotNickname] = useState("");
   const [forgotFavoriteSport, setForgotFavoriteSport] = useState("");
@@ -77,6 +78,7 @@ const LoginScreen = () => {
       email,
       name: forgotName,
       usn: forgotUsn,
+      userType: forgotUserType,
       nickname: forgotNickname,
       favoriteSport: forgotFavoriteSport,
     });
@@ -315,7 +317,23 @@ const LoginScreen = () => {
                   style={styles.inputGap}
                 />
 
-                {role === "user" ? (
+                <View style={styles.inputGap}>
+                  <Text style={[styles.label, { color: theme.text2 }]}>Account Type</Text>
+                  <View style={[styles.pickerWrap, { backgroundColor: theme.input, borderColor: theme.border }]}>
+                    <Picker
+                      selectedValue={forgotUserType}
+                      onValueChange={setForgotUserType}
+                      dropdownIconColor={theme.text2}
+                      style={{ color: theme.text }}
+                    >
+                      <Picker.Item label="Student" value="student" />
+                      <Picker.Item label="Faculty" value="faculty" />
+                      <Picker.Item label="Admin" value="admin" />
+                    </Picker>
+                  </View>
+                </View>
+
+                {forgotUserType === "student" ? (
                   <AppInput
                     label="USN"
                     value={forgotUsn}

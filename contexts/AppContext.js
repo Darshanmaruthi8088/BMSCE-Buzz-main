@@ -1069,10 +1069,11 @@ export const AppProvider = ({ children }) => {
     const trimmedNickname = normalizeRecoveryAnswer(payload.nickname || "");
     const trimmedFavoriteSport = normalizeRecoveryAnswer(payload.favoriteSport || "");
     const isAdminRecovery = trimmedEmail === PRIMARY_ADMIN_EMAIL;
+    const isStudentRecovery = !isAdminRecovery && payload.userType === "student";
 
     if (!trimmedEmail) return { ok: false, message: "Enter email for forgot password." };
     if (!trimmedName) return { ok: false, message: "Enter full name for forgot password." };
-    if (!isAdminRecovery && !trimmedUsn) return { ok: false, message: "Enter USN for forgot password." };
+    if (isStudentRecovery && !trimmedUsn) return { ok: false, message: "Enter USN for forgot password." };
     if (!trimmedNickname) return { ok: false, message: "Enter your nickname answer." };
     if (!trimmedFavoriteSport) return { ok: false, message: "Enter your favorite sport answer." };
     if (!useFirebaseBackend || !db) {
@@ -1251,7 +1252,7 @@ export const AppProvider = ({ children }) => {
 
   const publishPost = async (data) => {
     if (!user) return false;
-    const isUserPost = user.role === "user";
+    const isUserPost = !isAdmin;
     let coverImage = typeof data?.coverImage === "string" ? data.coverImage : "";
     const coverImageName =
       typeof data?.coverImageName === "string" && data.coverImageName.trim()

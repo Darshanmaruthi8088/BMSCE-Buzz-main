@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -96,6 +97,7 @@ const ContactUsScreen = () => {
   const { dark } = useApp();
   const theme = useMemo(() => getTheme(dark), [dark]);
   const insets = useSafeAreaInsets();
+  const [zoomedCreator, setZoomedCreator] = useState(null);
 
   const openMail = async (email) => {
     const url = `mailto:${email.trim()}`;
@@ -140,7 +142,9 @@ const ContactUsScreen = () => {
             key={c.id}
             style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}
           >
-            <CreatorPhoto creator={c} theme={theme} size={PHOTO_SIZE} />
+            <Pressable onPress={() => setZoomedCreator(c)}>
+              <CreatorPhoto creator={c} theme={theme} size={PHOTO_SIZE} />
+            </Pressable>
             <View style={styles.cardBody}>
               <Text style={[styles.name, { color: theme.text }]}>{c.name}</Text>
               {!c.usePlaceholderLogo ? (
@@ -163,6 +167,20 @@ const ContactUsScreen = () => {
           </View>
         ))}
       </ScrollView>
+
+      <Modal visible={!!zoomedCreator} transparent animationType="fade" onRequestClose={() => setZoomedCreator(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setZoomedCreator(null)}>
+          <View style={[styles.zoomedPhotoWrap, { backgroundColor: theme.card2, borderColor: theme.border }]}>
+            {zoomedCreator?.photo ? (
+              <Image source={zoomedCreator.photo} style={styles.zoomedPhoto} resizeMode="contain" />
+            ) : zoomedCreator?.usePlaceholderLogo ? (
+              <Image source={PLACEHOLDER_LOGO} style={styles.zoomedPhoto} resizeMode="contain" />
+            ) : (
+              <Avatar initials={zoomedCreator?.initials} imageUrl={zoomedCreator?.photoUrl} size={250} />
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -235,6 +253,26 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     opacity: 0.85,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  zoomedPhotoWrap: {
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    overflow: "hidden",
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomedPhoto: {
+    width: "100%",
+    height: "100%",
   },
 });
 
