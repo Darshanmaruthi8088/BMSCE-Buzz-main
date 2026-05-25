@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import FileSystem from "./fileSystem";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { initializeApp, getApp, getApps } from "firebase/app";
@@ -140,10 +140,8 @@ const isFirebaseStorageUri = (value = "") => /^gs:\/\//i.test(String(value || ""
 const hasUriScheme = (value = "") => /^[a-z][a-z0-9+.-]*:/i.test(String(value || ""));
 const FILESYSTEM_BASE64_ENCODING = FileSystem?.EncodingType?.Base64 || "base64";
 
-const getLocalMediaBaseDir = () => {
-  const rootDir = FileSystem.documentDirectory || FileSystem.cacheDirectory || "";
-  return rootDir ? `${rootDir}local-media` : "";
-};
+const getLocalMediaBaseDir = () =>
+  `${FileSystem.documentDirectory || FileSystem.cacheDirectory || ""}local-media`;
 
 const isPersistedLocalMediaUri = (value = "") => {
   const baseDir = getLocalMediaBaseDir();

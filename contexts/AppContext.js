@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import FileSystem from "../services/fileSystem";
+import * as FileSystem from "expo-file-system/legacy";
 import {
   addDoc,
   collection,
