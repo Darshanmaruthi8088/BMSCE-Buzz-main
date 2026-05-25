@@ -127,3 +127,131 @@
 [info] 
 [info] Project Console: https://console.firebase.google.com/project/bmsce-buzz-c461b/overview
 [info] Hosting URL: https://bmsce-buzz-c461b.web.app
+[debug] [2026-05-25T15:20:04.307Z] ----------------------------------------------------------------------
+[debug] [2026-05-25T15:20:04.311Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\dd708\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-05-25T15:20:04.312Z] CLI Version:   15.10.1
+[debug] [2026-05-25T15:20:04.312Z] Platform:      win32
+[debug] [2026-05-25T15:20:04.312Z] Node Version:  v25.1.0
+[debug] [2026-05-25T15:20:04.313Z] Time:          Mon May 25 2026 20:50:04 GMT+0530 (India Standard Time)
+[debug] [2026-05-25T15:20:04.313Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-25T15:20:06.493Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-25T15:20:06.494Z] > authorizing via signed-in user (dd7085646@gmail.com)
+[debug] [2026-05-25T15:20:06.494Z] [iam] checking project bmsce-buzz-c461b for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-05-25T15:20:06.496Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:06.497Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:06.498Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions [none]
+[debug] [2026-05-25T15:20:06.498Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-05-25T15:20:06.498Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-05-25T15:20:08.078Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions 200
+[debug] [2026-05-25T15:20:08.079Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-05-25T15:20:08.080Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:08.080Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:08.081Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/bmsce-buzz-c461b [none]
+[debug] [2026-05-25T15:20:08.997Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/bmsce-buzz-c461b 200
+[debug] [2026-05-25T15:20:08.997Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/bmsce-buzz-c461b {"projectId":"bmsce-buzz-c461b","projectNumber":"676978260503","displayName":"BMSCE-Buzz","name":"projects/bmsce-buzz-c461b","resources":{"hostingSite":"bmsce-buzz-c461b"},"state":"ACTIVE","etag":"1_d253539f-faf6-4f2e-aa75-d5442f7e0552"}
+[info] 
+[info] === Deploying to 'bmsce-buzz-c461b'...
+[info] 
+[info] i  deploying hosting 
+[debug] [2026-05-25T15:20:09.001Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:09.002Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:09.002Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions [none]
+[debug] [2026-05-25T15:20:09.002Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-05-25T15:20:10.599Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions 200
+[debug] [2026-05-25T15:20:10.599Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions {"name":"projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[info] i  hosting[bmsce-buzz-c461b]: beginning deploy... 
+[info] i  hosting[bmsce-buzz-c461b]: found 45 files in build 
+[debug] [2026-05-25T15:20:10.612Z] [hosting] uploading with 200 concurrency
+[debug] [2026-05-25T15:20:10.755Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:10.756Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:10.757Z] [hosting] hash cache [YnVpbGQ] stored for 45 files
+[debug] [2026-05-25T15:20:10.757Z] [hosting][hash queue][FINAL] {"max":141,"min":3,"avg":29.42222222222222,"active":0,"complete":45,"success":45,"errored":0,"retried":0,"total":45,"elapsed":144}
+[debug] [2026-05-25T15:20:10.758Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5:populateFiles [none]
+[debug] [2026-05-25T15:20:10.758Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5:populateFiles {"files":{"/robots.txt":"bfe106a3fb878dc83461c86818bf74fc1bdc7f28538ba613cd3e775516ce8b49","/manifest.json":"d9319f62ea1d5f43db9f2c3254061e082240c6f2c57ddc16255d6cce8e2d3797","/logo512.png":"e96dcf2e194df94594ddada91bcafe765aa0e08aa5fa066065f1d0c888b1ac32","/logo192.png":"e96dcf2e194df94594ddada91bcafe765aa0e08aa5fa066065f1d0c888b1ac32","/firebase-messaging-sw.js":"b4209dbb6faa508a61cdd08eea8d7cfc100797eabb66856aee45e7e0ad94182f","/favicon.ico":"27edce7be5922cf0bef7d4136f69b5bfbdd5bf8c13c7b026f71187d41a00aa7d","/app-logo.png":"e96dcf2e194df94594ddada91bcafe765aa0e08aa5fa066065f1d0c888b1ac32","/metadata.json":"59607d4abc28dbe25c04810f4160b1e785f320a28d51d4caf80c70367ec8b978","/index.html":"71dce2f03f344158cec229a899e145ca5a54645bb0b09a4da15425b5a5e86e33","/assets/node_modules/@react-navigation/elements/lib/module/assets/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png":"8fee32cac2c20d75f401127dca613982bd2cc24636cb0baff0e739d7bc772925","/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@3x.png":"4925d2fdfbfc79146b115d21777eeb92638afa1f1d7b0c32cdd2a30bd0ea60b1","/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@4x.png":"ad78649de350f3826600d285134a41ab758b2b558865f257a9854474a2d7100f","/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png":"5a616c6292845fdb33e10e0393de7568448b276cdf6a313217a112295a96c79a","/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@2x.png":"e15147d584d740de8fc401f1f020c291d86490953e6c61101a022db03b47e5d4","/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@3x.png":"61b67e5683f40de4c348fbf06f8f0a72918e50eddd41f1ab6ab85b47f48b8db0","/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@2x.png":"d54b64c57ed817c84b69fb726ca8a6a1119869fdabf423b6158603642faa9873","/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png":"ef62f98ad70f48d972d5e7f06fa668c61c554b3509601eae35eeda9256d7e6cc","/assets/node_modules/@react-navigation/elements/lib/module/assets/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png":"c9dc675c0fa80f9b608ebff3c70479f21511b6b02c6ca5c2ee4da9be357b26a0","/assets/node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png":"c2f3e3f9697c952843aae5bdb3f9f5b39f6dde03cb589d366034cc3db25f5940","/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@4x.png":"2c8022034bdd610675958206b2b484be727b204100f62403c34114bb868e296f","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/EvilIcons.140c53a7643ea949007aa9a282153849.ttf":"33cc61ed1c6f7b8415d75899ee2e0a9cd045aae85ced7de5243a4e091c4906d5","/assets/assets/creators/Darshan pn.jpg.c3ddcfcc858af3d4a293889f22b45e96.jpeg":"8318fa79404f345a43c6c16e702aca76f7c4c39f5e237ab4a218cc65ea83fec0","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Zocial.1681f34aaca71b8dfb70756bca331eb2.ttf":"afa62b88cb08058a55259eaadc0a77071a233d672bf48528ec202d7e8e209fb1","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf":"c2837c72480a878bbf3ce9e3c65009376020eddf40540f5d30f9eea76cd617c7","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.1f77739ca9ff2188b539c36f30ffa2be.ttf":"56a9ac2c85b7c593c1940ade60e56ee8a25d05f5568bf113d533db251ad1b86c","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Foundation.e20945d7c929279ef7a6f1db184a4470.ttf":"c2f91432452dc2af8572d423174cbafe05f90813619fbadce4de3f62b9ea9c07","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.d2285965fe34b05465047401b8595dd0.ttf":"7dc88f09697a4ae07d5b51ae255548528f828fc13bf992b0920e448300aa63c5","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.370dd5af19f8364907b6e2c41f45dbbf.ttf":"1757df674dbf9203c0375f45b79386d14b26122806a23c9aac5f405a1f98700a","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Octicons.871378c6eab492a3e689a9385dc45a12.ttf":"a52e32ec2b8a58173e5824c468d992d9b65749e66ed521c3c28d57361e43deae","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf":"9f63a3b136a168c5850820e3e5ce7af5288e591715ecc7fa40938e5d6413bd0c","/assets/assets/creators/Aneesh T.S.jpg.636a00336607e8194f5b30c57bbd3131.jpeg":"20e17b8b923c7d9242ea1e405009dbb38bcf2124bc2fdfca5cc6c78bbb0d1f83","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf":"5688db18d40002c1d45f2a137810d091588c18de48f789babcc3931b58bb078c","/assets/assets/app-logo.91d7894bfe8d82f7968829f2f25cfb17.png":"e96dcf2e194df94594ddada91bcafe765aa0e08aa5fa066065f1d0c888b1ac32","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.3b89dd103490708d19a95adcae52210e.ttf":"b20ce98b15739af71e3b1ec6463aaecf660d88eec057c5a35ad29363089fc087","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.b06871f281fee6b241d60582ae9369b9.ttf":"372cd1aecf58263d38b3dd9c528d48ab6189595bd4e2bd4b54e8d74dd87fb9e6","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf":"07fd72248128f36099779414746afa143b93088555572cdf4748f73888385f92","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.56c8d80832e37783f12c05db7c8849e2.ttf":"6d3a52f16a8ad644d70f92c27551c11c8cb8da014bbda19bf7db6b1efa3bde76","/assets/assets/creators/Darshan.jpg.ccb6e88583f2d3dd88137d15a7427a0a.jpeg":"d0dd633d389f816279227c931a970f3a8afc1f7ec69c825362925b2675d1f18c","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf":"c9ad4674db8af46e0b4bdcff009bcf4925863535ce1230899d2576645ec07691","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf":"c662a3e02d659bcd86404af2de6377d32528a9c34577df7903578bebdd9f3be5","/assets/assets/creators/Aneesh GGS.jpg.fcef1ba5abc36d7cdcfdbf30364c0795.jpeg":"83eb870cb85bc69003648d3d595c9525cdd09604f373ecd02a0492352a9f248e","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.adec7d6f310bc577f05e8fe06a5daccf.ttf":"97fef656feed9857ff47cf63a1a94b1dc04ba9cde1282087981b472119929568","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf":"711ac561b20157b0f0daf1340845ff263b89bc1e2aae30638497716cef43996e","/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf":"c3b223b088d2712e67f773b4f9589093ce20c1341ed97f3b9126c7862a3b3dc7","/_expo/static/js/web/index-ab6da12ba6a993fb865bb773b50a9fd9.js":"5f911096b6a2969923a3b35d526c11a4ab4bd7a349a2ffd31170c80dc9ceb261"}}
+[debug] [2026-05-25T15:20:11.670Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5:populateFiles 200
+[debug] [2026-05-25T15:20:11.671Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5:populateFiles {"uploadRequiredHashes":["71dce2f03f344158cec229a899e145ca5a54645bb0b09a4da15425b5a5e86e33"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5/files"}
+[debug] [2026-05-25T15:20:11.671Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:11.672Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:11.672Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5/files/71dce2f03f344158cec229a899e145ca5a54645bb0b09a4da15425b5a5e86e33 [none]
+[debug] [2026-05-25T15:20:11.672Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5/files/71dce2f03f344158cec229a899e145ca5a54645bb0b09a4da15425b5a5e86e33 [stream]
+[debug] [2026-05-25T15:20:11.673Z] [hosting][populate queue][FINAL] {"max":917,"min":917,"avg":917,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":918}
+[debug] [2026-05-25T15:20:11.674Z] [hosting] uploads queued: 1
+[info] i  hosting: uploading new files [0/1] (0%) 
+[debug] [2026-05-25T15:20:13.825Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5/files/71dce2f03f344158cec229a899e145ca5a54645bb0b09a4da15425b5a5e86e33 200
+[debug] [2026-05-25T15:20:13.825Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5/files/71dce2f03f344158cec229a899e145ca5a54645bb0b09a4da15425b5a5e86e33 [stream]
+[debug] [2026-05-25T15:20:13.825Z] [hosting][upload queue][FINAL] {"max":2154,"min":2154,"avg":2154,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":2154}
+[info] i  hosting: upload complete 
+[info] +  hosting[bmsce-buzz-c461b]: file upload complete 
+[debug] [2026-05-25T15:20:13.825Z] [hosting] deploy completed after 3223ms
+[debug] [2026-05-25T15:20:13.825Z] [
+  {
+    "config": {
+      "public": "build",
+      "ignore": [
+        "firebase.json",
+        "**/.*"
+      ],
+      "headers": [
+        {
+          "source": "index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "_expo/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public,max-age=31536000,immutable"
+            }
+          ]
+        },
+        {
+          "source": "assets/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public,max-age=31536000,immutable"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "site": "bmsce-buzz-c461b"
+    },
+    "version": "projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5"
+  }
+]
+[info] i  hosting[bmsce-buzz-c461b]: finalizing version... 
+[debug] [2026-05-25T15:20:13.828Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:13.828Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:13.828Z] >>> [apiv2][query] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5 updateMask=status%2Cconfig
+[debug] [2026-05-25T15:20:13.829Z] >>> [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5 {"status":"FINALIZED","config":{"rewrites":[{"glob":"**","path":"/index.html"}],"headers":[{"glob":"index.html","headers":{"Cache-Control":"no-cache"}},{"glob":"_expo/**","headers":{"Cache-Control":"public,max-age=31536000,immutable"}},{"glob":"assets/**","headers":{"Cache-Control":"public,max-age=31536000,immutable"}}]}}
+[debug] [2026-05-25T15:20:14.756Z] <<< [apiv2][status] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5 200
+[debug] [2026-05-25T15:20:14.757Z] <<< [apiv2][body] PATCH https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5 {"name":"projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"no-cache"},"glob":"index.html"},{"headers":{"Cache-Control":"public,max-age=31536000,immutable"},"glob":"_expo/**"},{"headers":{"Cache-Control":"public,max-age=31536000,immutable"},"glob":"assets/**"}],"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-05-25T15:20:09.578179Z","createUser":{"email":"dd7085646@gmail.com"},"finalizeTime":"2026-05-25T15:20:14.217606Z","finalizeUser":{"email":"dd7085646@gmail.com"}}
+[debug] [2026-05-25T15:20:14.757Z] [hosting] finalized version for bmsce-buzz-c461b:[object Object]
+[info] +  hosting[bmsce-buzz-c461b]: version finalized 
+[info] i  hosting[bmsce-buzz-c461b]: releasing new version... 
+[debug] [2026-05-25T15:20:14.757Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:14.757Z] Checked if tokens are valid: true, expires at: 1779725763854
+[debug] [2026-05-25T15:20:14.757Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/channels/live/releases versionName=projects%2F676978260503%2Fsites%2Fbmsce-buzz-c461b%2Fversions%2F68cfad9d2f1383e5
+[debug] [2026-05-25T15:20:14.757Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/channels/live/releases {}
+[debug] [2026-05-25T15:20:15.746Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/channels/live/releases 200
+[debug] [2026-05-25T15:20:15.746Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/bmsce-buzz-c461b/channels/live/releases {"name":"projects/676978260503/sites/bmsce-buzz-c461b/channels/live/releases/1779722414493000","version":{"name":"projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"no-cache"},"glob":"index.html"},{"headers":{"Cache-Control":"public,max-age=31536000,immutable"},"glob":"_expo/**"},{"headers":{"Cache-Control":"public,max-age=31536000,immutable"},"glob":"assets/**"}],"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-05-25T15:20:09.578179Z","createUser":{"email":"dd7085646@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJ0WqTU3Qe0mx2dgNyx5Bc2CvHhhE3kXpBNcl0qUXvayH_wu7_e"},"finalizeTime":"2026-05-25T15:20:14.217606Z","finalizeUser":{"email":"dd7085646@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJ0WqTU3Qe0mx2dgNyx5Bc2CvHhhE3kXpBNcl0qUXvayH_wu7_e"}},"type":"DEPLOY","releaseTime":"2026-05-25T15:20:14.493Z","releaseUser":{"email":"dd7085646@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJ0WqTU3Qe0mx2dgNyx5Bc2CvHhhE3kXpBNcl0qUXvayH_wu7_e"}}
+[debug] [2026-05-25T15:20:15.747Z] [hosting] release: {"name":"projects/676978260503/sites/bmsce-buzz-c461b/channels/live/releases/1779722414493000","version":{"name":"projects/676978260503/sites/bmsce-buzz-c461b/versions/68cfad9d2f1383e5","status":"FINALIZED","config":{"headers":[{"headers":{"Cache-Control":"no-cache"},"glob":"index.html"},{"headers":{"Cache-Control":"public,max-age=31536000,immutable"},"glob":"_expo/**"},{"headers":{"Cache-Control":"public,max-age=31536000,immutable"},"glob":"assets/**"}],"rewrites":[{"glob":"**","path":"/index.html"}]},"labels":{"deployment-tool":"cli-firebase"},"createTime":"2026-05-25T15:20:09.578179Z","createUser":{"email":"dd7085646@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJ0WqTU3Qe0mx2dgNyx5Bc2CvHhhE3kXpBNcl0qUXvayH_wu7_e"},"finalizeTime":"2026-05-25T15:20:14.217606Z","finalizeUser":{"email":"dd7085646@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJ0WqTU3Qe0mx2dgNyx5Bc2CvHhhE3kXpBNcl0qUXvayH_wu7_e"}},"type":"DEPLOY","releaseTime":"2026-05-25T15:20:14.493Z","releaseUser":{"email":"dd7085646@gmail.com","imageUrl":"https://lh3.googleusercontent.com/a/ACg8ocJ0WqTU3Qe0mx2dgNyx5Bc2CvHhhE3kXpBNcl0qUXvayH_wu7_e"}}
+[info] +  hosting[bmsce-buzz-c461b]: release complete 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/bmsce-buzz-c461b/overview
+[info] Hosting URL: https://bmsce-buzz-c461b.web.app
