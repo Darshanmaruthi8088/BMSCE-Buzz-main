@@ -135,7 +135,7 @@ const AdminScreen = ({ route }) => {
             Alert.alert(
               "Delete User Failed",
               deleteResult?.message ||
-                "Could not delete this user's Firebase Auth account. Deploy the Firebase Function and try again."
+                "Could not delete this user. Check Firebase configuration and try again."
             );
           }
         },

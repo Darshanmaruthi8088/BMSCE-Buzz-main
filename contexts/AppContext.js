@@ -88,6 +88,19 @@ const getDeleteUserAccountMessage = (error) => {
   }
   return "Could not delete this user's Firebase Auth account. Check Firebase Functions logs and try again.";
 };
+const isDeleteUserFunctionUnavailable = (error) => {
+  const code = String(error?.code || "").replace(/^functions\//, "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  if (["permission-denied", "unauthenticated", "invalid-argument", "failed-precondition"].includes(code)) {
+    return false;
+  }
+  return (
+    ["not-found", "unimplemented", "unavailable"].includes(code) ||
+    (message.includes("function") && message.includes("not found")) ||
+    message.includes("not deployed") ||
+    message.includes("unimplemented")
+  );
+};
 
 const AVATAR_CACHE_FILE =
   FileSystem.documentDirectory || FileSystem.cacheDirectory
@@ -978,6 +991,14 @@ export const AppProvider = ({ children }) => {
       } else {
         credential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       }
+      const deletedUserRef = doc(db, "deletedUsers", credential.user.uid);
+      const deletedUserSnap = await safeGetUserSnapshot(deletedUserRef);
+      if (deletedUserSnap?.exists?.()) {
+        await signOut(auth);
+        manualAuthSessionRef.current = false;
+        setUser(null);
+        return { ok: false, message: "This account was deleted by an administrator." };
+      }
       const userRef = doc(db, "users", credential.user.uid);
       const userSnap = await safeGetUserSnapshot(userRef);
       const hasUserDoc = !!userSnap?.exists?.();
@@ -1594,6 +1615,9 @@ export const AppProvider = ({ children }) => {
 
   const deleteUserProfile = async (targetUserId) => {
     if (!targetUserId) return deleteUserResult(false, "Select a user to delete.");
+    if (!isAdmin) {
+      return deleteUserResult(false, "Only the primary admin can delete users.");
+    }
     if (targetUserId === user?.id) {
       return deleteUserResult(false, "You cannot delete your own admin account.");
     }
@@ -1608,8 +1632,48 @@ export const AppProvider = ({ children }) => {
     if (normalizeEmail(targetProfile?.email || "") === PRIMARY_ADMIN_EMAIL) {
       return deleteUserResult(false, "The primary admin account cannot be deleted.");
     }
+
+    const deleteProfileFromFirestore = async () => {
+      try {
+        const batch = writeBatch(db);
+        batch.set(
+          doc(db, "deletedUsers", targetUserId),
+          {
+            userId: targetUserId,
+            email: targetProfile.email || "",
+            name: targetProfile.name || "User",
+            deletedBy: user?.id || "",
+            deletedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        batch.delete(doc(db, "users", targetUserId));
+
+        const fcmTokensSnapshot = await getDocs(
+          query(collection(db, "fcmTokens"), where("userId", "==", targetUserId))
+        );
+        fcmTokensSnapshot.docs.forEach((tokenDoc) => {
+          batch.delete(tokenDoc.ref);
+        });
+
+        const personalEventsSnapshot = await getDocs(
+          collection(db, "users", targetUserId, "personalEvents")
+        );
+        personalEventsSnapshot.docs.forEach((eventDoc) => {
+          batch.delete(eventDoc.ref);
+        });
+
+        await batch.commit();
+        setUsers((prev) => prev.filter((item) => item.id !== targetUserId));
+        return deleteUserResult(true);
+      } catch (error) {
+        console.error("Failed to delete user profile:", error);
+        return deleteUserResult(false, "Could not delete this user's profile. Check Firestore rules and try again.");
+      }
+    };
+
     if (!firebaseFunctions) {
-      return deleteUserResult(false, "Firebase Functions is not configured for this app build.");
+      return deleteProfileFromFirestore();
     }
 
     try {
@@ -1618,6 +1682,9 @@ export const AppProvider = ({ children }) => {
       return deleteUserResult(true);
     } catch (error) {
       console.error("Failed to delete user account:", error);
+      if (isDeleteUserFunctionUnavailable(error)) {
+        return deleteProfileFromFirestore();
+      }
       return deleteUserResult(false, getDeleteUserAccountMessage(error));
     }
   };

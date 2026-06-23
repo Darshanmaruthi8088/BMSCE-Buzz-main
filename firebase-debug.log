@@ -356,3 +356,72 @@
 [error] Error: Your project bmsce-buzz-c461b must be on the Blaze (pay-as-you-go) plan to complete this command. Required API artifactregistry.googleapis.com can't be enabled until the upgrade is complete. To upgrade, visit the following URL:
 
 https://console.firebase.google.com/project/bmsce-buzz-c461b/usage/details
+[debug] [2026-06-23T10:04:50.983Z] ----------------------------------------------------------------------
+[debug] [2026-06-23T10:04:50.989Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\dd708\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only firestore:rules
+[debug] [2026-06-23T10:04:50.990Z] CLI Version:   15.10.1
+[debug] [2026-06-23T10:04:50.990Z] Platform:      win32
+[debug] [2026-06-23T10:04:50.990Z] Node Version:  v25.1.0
+[debug] [2026-06-23T10:04:50.990Z] Time:          Tue Jun 23 2026 15:34:50 GMT+0530 (India Standard Time)
+[debug] [2026-06-23T10:04:50.990Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-23T10:04:53.839Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-23T10:04:53.840Z] > authorizing via signed-in user (dd7085646@gmail.com)
+[debug] [2026-06-23T10:04:53.840Z] [iam] checking project bmsce-buzz-c461b for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-06-23T10:04:53.842Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:53.843Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:53.844Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions [none]
+[debug] [2026-06-23T10:04:53.844Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T10:04:53.844Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-06-23T10:04:55.335Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions 200
+[debug] [2026-06-23T10:04:55.336Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'bmsce-buzz-c461b'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-06-23T10:04:55.345Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:55.345Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:55.346Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/bmsce-buzz-c461b/databases/(default) [none]
+[debug] [2026-06-23T10:04:55.927Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/bmsce-buzz-c461b/databases/(default) 200
+[debug] [2026-06-23T10:04:55.927Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/bmsce-buzz-c461b/databases/(default) {"name":"projects/bmsce-buzz-c461b/databases/(default)","uid":"3ab0ac27-697f-44c0-a886-5af1c78f186d","createTime":"2026-03-17T12:43:33.837292Z","updateTime":"2026-03-17T12:43:33.837292Z","locationId":"asia-south1","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-06-23T09:04:54.116762Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"j","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IIzG4Z+OnZUDMKjKkbeXp5MD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-06-23T10:04:55.930Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:55.930Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:55.930Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b:test [none]
+[debug] [2026-06-23T10:04:55.930Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b:test [omitted]
+[debug] [2026-06-23T10:04:56.567Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b:test 200
+[debug] [2026-06-23T10:04:56.567Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b:test {}
+[info] +  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-06-23T10:04:56.569Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:56.569Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:56.570Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/releases pageSize=10&pageToken=
+[debug] [2026-06-23T10:04:58.013Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/releases 200
+[debug] [2026-06-23T10:04:58.013Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/releases {"releases":[{"name":"projects/bmsce-buzz-c461b/releases/cloud.firestore","rulesetName":"projects/bmsce-buzz-c461b/rulesets/08278974-8b5f-477e-b7e1-4822c092b078","createTime":"2026-03-17T12:43:38.820603Z","updateTime":"2026-04-22T12:33:59.699031Z"}]}
+[debug] [2026-06-23T10:04:58.013Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:58.014Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:58.014Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/rulesets/08278974-8b5f-477e-b7e1-4822c092b078 [none]
+[debug] [2026-06-23T10:04:59.367Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/rulesets/08278974-8b5f-477e-b7e1-4822c092b078 200
+[debug] [2026-06-23T10:04:59.367Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/rulesets/08278974-8b5f-477e-b7e1-4822c092b078 [omitted]
+[info] i  firestore: uploading rules firestore.rules... 
+[debug] [2026-06-23T10:04:59.370Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:59.371Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:59.371Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/rulesets [none]
+[debug] [2026-06-23T10:04:59.371Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/rulesets [omitted]
+[debug] [2026-06-23T10:04:59.925Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/rulesets 200
+[debug] [2026-06-23T10:04:59.926Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/rulesets {"name":"projects/bmsce-buzz-c461b/rulesets/89b4cd8c-f25d-4af5-9581-8555c3e06747","source":{"files":[{"content":"rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    function signedIn() {\n      return request.auth != null;\n    }\n\n    function isPrimaryAdmin() {\n      return signedIn() && request.auth.token.email == \"dd7085646@gmail.com\";\n    }\n\n    match /users/{userId} {\n      allow read: if signedIn();\n      allow create: if signedIn() && request.auth.uid == userId;\n      allow update, delete: if signedIn() && (request.auth.uid == userId || isPrimaryAdmin());\n\n      match /personalEvents/{eventId} {\n        allow read, delete: if signedIn() && (request.auth.uid == userId || isPrimaryAdmin());\n        allow create, update: if signedIn() &&\n          request.auth.uid == userId &&\n          request.resource.data.userId == userId;\n      }\n    }\n\n    match /deletedUsers/{userId} {\n      allow read: if signedIn() && (request.auth.uid == userId || isPrimaryAdmin());\n      allow create, update, delete: if isPrimaryAdmin();\n    }\n\n    match /news/{newsId} {\n      allow read: if signedIn();\n      allow create: if signedIn();\n      allow update: if signedIn();\n      allow delete: if signedIn() && (isPrimaryAdmin() || resource.data.authorId == request.auth.uid);\n\n      match /comments/{commentId} {\n        allow read: if signedIn();\n        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;\n        allow update, delete: if signedIn() && (isPrimaryAdmin() || resource.data.userId == request.auth.uid);\n      }\n    }\n\n    match /notifications/{notificationId} {\n      allow read: if signedIn();\n      allow create: if signedIn();\n      allow update: if signedIn();\n      allow delete: if isPrimaryAdmin();\n    }\n\n    match /fcmTokens/{tokenId} {\n      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;\n      allow read, update, delete: if signedIn() && (isPrimaryAdmin() || resource.data.userId == request.auth.uid);\n    }\n\n    match /{document=**} {\n      allow read, write: if false;\n    }\n  }\n}\n","name":"firestore.rules"}]},"createTime":"2026-06-23T10:04:57.956735Z","metadata":{"services":["cloud.firestore"]}}
+[debug] [2026-06-23T10:04:59.926Z] [rules] created ruleset projects/bmsce-buzz-c461b/rulesets/89b4cd8c-f25d-4af5-9581-8555c3e06747
+[debug] [2026-06-23T10:04:59.927Z] [rules] releasing cloud.firestore/(default) with ruleset projects/bmsce-buzz-c461b/rulesets/89b4cd8c-f25d-4af5-9581-8555c3e06747
+[debug] [2026-06-23T10:04:59.927Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:59.927Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T10:04:59.927Z] >>> [apiv2][query] PATCH https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/releases/cloud.firestore/(default) [none]
+[debug] [2026-06-23T10:04:59.927Z] >>> [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/releases/cloud.firestore/(default) {"release":{"name":"projects/bmsce-buzz-c461b/releases/cloud.firestore/(default)","rulesetName":"projects/bmsce-buzz-c461b/rulesets/89b4cd8c-f25d-4af5-9581-8555c3e06747"}}
+[debug] [2026-06-23T10:05:01.366Z] <<< [apiv2][status] PATCH https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/releases/cloud.firestore/(default) 200
+[debug] [2026-06-23T10:05:01.367Z] <<< [apiv2][body] PATCH https://firebaserules.googleapis.com/v1/projects/bmsce-buzz-c461b/releases/cloud.firestore/(default) {"name":"projects/bmsce-buzz-c461b/releases/cloud.firestore","rulesetName":"projects/bmsce-buzz-c461b/rulesets/89b4cd8c-f25d-4af5-9581-8555c3e06747","createTime":"2026-03-17T12:43:38.820603Z","updateTime":"2026-06-23T10:04:59.455257Z"}
+[debug] [2026-06-23T10:05:01.367Z] [rules] updated release projects/bmsce-buzz-c461b/releases/cloud.firestore
+[info] +  firestore: released rules firestore.rules to cloud.firestore 
+[info] 
+[info] +  Deploy complete! 
+[info] 
+[info] Project Console: https://console.firebase.google.com/project/bmsce-buzz-c461b/overview
