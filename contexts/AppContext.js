@@ -1438,7 +1438,7 @@ export const AppProvider = ({ children }) => {
           throw new Error("Cover image upload did not produce a public URL.");
         }
       } catch (error) {
-        console.error("Cover image upload failed:", error);
+        console.warn("Cover image upload failed:", error?.message || error);
         if (useFirebaseBackend) return false;
       }
     }

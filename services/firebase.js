@@ -87,11 +87,11 @@ if (isFirebaseConfigured) {
     firebaseConfig.storageBucket || storage?.app?.options?.storageBucket || ""
   );
   const projectId = String(firebaseConfig.projectId || "").trim();
-  const bucketCandidates = [configuredBucket];
-  if (projectId) {
-    bucketCandidates.push(`${projectId}.appspot.com`);
-    bucketCandidates.push(`${projectId}.firebasestorage.app`);
-  }
+  const bucketCandidates = configuredBucket
+    ? [configuredBucket]
+    : projectId
+      ? [`${projectId}.firebasestorage.app`, `${projectId}.appspot.com`]
+      : [];
 
   const seenBuckets = new Set();
   uploadStorageTargets = bucketCandidates
@@ -216,6 +216,40 @@ const readUriAsBase64 = async (uri) => {
   }
 };
 
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+const base64ToUint8Array = (value = "") => {
+  const normalized = String(value || "")
+    .replace(/^data:.*;base64,/i, "")
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .replace(/\s/g, "");
+  if (!normalized) return new Uint8Array();
+
+  const padding = normalized.endsWith("==") ? 2 : normalized.endsWith("=") ? 1 : 0;
+  const outputLength = Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
+  const bytes = new Uint8Array(outputLength);
+  let byteIndex = 0;
+
+  for (let index = 0; index < normalized.length; index += 4) {
+    const first = BASE64_CHARS.indexOf(normalized[index]);
+    const second = BASE64_CHARS.indexOf(normalized[index + 1]);
+    const third = normalized[index + 2] === "=" ? 0 : BASE64_CHARS.indexOf(normalized[index + 2]);
+    const fourth = normalized[index + 3] === "=" ? 0 : BASE64_CHARS.indexOf(normalized[index + 3]);
+
+    if (first < 0 || second < 0 || third < 0 || fourth < 0) {
+      throw new Error("Image file could not be converted for upload.");
+    }
+
+    const triplet = (first << 18) | (second << 12) | (third << 6) | fourth;
+    if (byteIndex < outputLength) bytes[byteIndex++] = (triplet >> 16) & 255;
+    if (byteIndex < outputLength) bytes[byteIndex++] = (triplet >> 8) & 255;
+    if (byteIndex < outputLength) bytes[byteIndex++] = triplet & 255;
+  }
+
+  return bytes;
+};
+
 const persistLocalImageUri = async (uri, sourceName = "") => {
   if (!uri || !isLikelyLocalMediaUri(uri)) return uri || "";
   const baseDir = getLocalMediaBaseDir();
@@ -300,6 +334,11 @@ export const uploadImageAsync = async ({
   const cleanName = finalName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const objectPath = `${pathPrefix}/${cleanName}`;
   let lastError = null;
+  let cachedBase64 = null;
+  const getBase64 = async () => {
+    if (cachedBase64 == null) cachedBase64 = await readUriAsBase64(sourceUri);
+    return cachedBase64;
+  };
 
   for (const target of storageTargets) {
     const storageRef = ref(target.instance, objectPath);
@@ -318,7 +357,16 @@ export const uploadImageAsync = async ({
 
       try {
         const contentType = getContentType(ext, "");
-        const base64 = await readUriAsBase64(sourceUri);
+        const bytes = base64ToUint8Array(await getBase64());
+        await uploadBytes(storageRef, bytes, { contentType });
+        return await getDownloadURL(storageRef);
+      } catch (bytesError) {
+        lastError = bytesError || error;
+      }
+
+      try {
+        const contentType = getContentType(ext, "");
+        const base64 = await getBase64();
         await uploadString(storageRef, base64, "base64", { contentType });
         return await getDownloadURL(storageRef);
       } catch (base64Error) {
