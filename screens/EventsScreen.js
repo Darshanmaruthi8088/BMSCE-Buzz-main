@@ -240,6 +240,9 @@ const EventsScreen = () => {
     }
 
     setPersonalModalVisible(false);
+    if (result.message) {
+      Alert.alert("Create Event", result.message);
+    }
   };
 
   return (

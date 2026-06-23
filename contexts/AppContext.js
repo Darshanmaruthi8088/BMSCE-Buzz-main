@@ -636,6 +636,10 @@ export const AppProvider = ({ children }) => {
         setPersonalEvents(mappedEvents);
       },
       (error) => {
+        if (isFirestorePermissionDeniedError(error)) {
+          setPersonalEvents([]);
+          return;
+        }
         console.error("Failed to read personal events:", error);
       }
     );
@@ -1783,6 +1787,18 @@ export const AppProvider = ({ children }) => {
         });
         return { ok: true, message: "" };
       } catch (error) {
+        if (isFirestorePermissionDeniedError(error)) {
+          const localId = `local-${Date.now()}`;
+          setPersonalEvents((prev) =>
+            [...prev, mapPersonalCalendarEvent(localId, payload)].sort((a, b) =>
+              a.startDateTime.localeCompare(b.startDateTime)
+            )
+          );
+          return {
+            ok: true,
+            message: "Saved on this device. Deploy Firestore rules to sync personal events.",
+          };
+        }
         console.error("Failed to create personal event:", error);
         return { ok: false, message: "Could not save this event. Please try again." };
       }
