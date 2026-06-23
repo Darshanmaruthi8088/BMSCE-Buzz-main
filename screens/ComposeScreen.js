@@ -85,6 +85,8 @@ const ComposeScreen = () => {
   const [step, setStep] = useState(1);
   const [coverImageName, setCoverImageName] = useState("");
   const [coverImageUri, setCoverImageUri] = useState("");
+  const [coverImageBase64, setCoverImageBase64] = useState("");
+  const [coverImageMimeType, setCoverImageMimeType] = useState("");
   const [startDateTime, setStartDateTime] = useState(() => initialStartDate);
   const [endDateTime, setEndDateTime] = useState(() => createDefaultEndDate(initialStartDate));
   const [pickerConfig, setPickerConfig] = useState({ visible: false, mode: "date", target: "start" });
@@ -158,6 +160,8 @@ const ComposeScreen = () => {
         priority,
         coverImageUri,
         coverImageName,
+        coverImageBase64,
+        coverImageMimeType,
         startDateTime: startDateTime.toISOString(),
         endDateTime: endDateTime.toISOString(),
       });
@@ -174,7 +178,12 @@ const ComposeScreen = () => {
         navigation.goBack();
         return;
       }
-      Alert.alert("Publish failed", "Please check your connection and try again.");
+      Alert.alert(
+        "Publish failed",
+        coverImageUri
+          ? "Could not save this cover photo. Pick a smaller image or submit without a cover photo."
+          : "Please check your connection and try again."
+      );
     } catch (error) {
       console.error("ComposeScreen submit error:", error);
       Alert.alert("Error", "An unexpected error occurred while submitting.");
@@ -194,7 +203,8 @@ const ComposeScreen = () => {
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [16, 9],
-      quality: 0.85,
+      quality: 0.35,
+      base64: true,
       exif: false,
       selectionLimit: 1,
     });
@@ -202,6 +212,8 @@ const ComposeScreen = () => {
     if (result.canceled) return;
     const asset = result.assets?.[0];
     if (asset?.uri) setCoverImageUri(asset.uri);
+    setCoverImageBase64(typeof asset?.base64 === "string" ? asset.base64 : "");
+    setCoverImageMimeType(typeof asset?.mimeType === "string" ? asset.mimeType : "");
     if (asset?.fileName) setCoverImageName(asset.fileName);
     else if (asset?.uri) setCoverImageName(asset.uri.split("/").pop() || "selected-image.jpg");
   };

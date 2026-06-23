@@ -242,6 +242,7 @@ const normalizeNotificationCutoffMs = (value) => {
 };
 
 const MAX_AVATAR_BASE64_LENGTH = 750_000;
+const MAX_POST_COVER_BASE64_LENGTH = 650_000;
 const FILESYSTEM_BASE64_ENCODING = FileSystem?.EncodingType?.Base64 || "base64";
 const AVATAR_MIME_BY_EXT = {
   jpg: "image/jpeg",
@@ -260,20 +261,60 @@ const getAvatarExtension = (value = "") => {
   return /^[a-z0-9]+$/.test(ext) ? ext : "";
 };
 
-const buildAvatarDataUri = async (uri = "", fileName = "") => {
-  if (!uri) return "";
+const normalizeImageBase64 = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  return raw.includes(",") ? raw.split(",").pop() : raw;
+};
+
+const getImageMimeType = (mimeType = "", fileName = "", uri = "") => {
+  const normalizedMime = String(mimeType || "").trim().toLowerCase();
+  if (normalizedMime.startsWith("image/")) return normalizedMime.split(";")[0];
+  const ext = getAvatarExtension(fileName) || getAvatarExtension(uri) || "jpg";
+  return AVATAR_MIME_BY_EXT[ext] || "image/jpeg";
+};
+
+const buildImageDataUri = async ({
+  uri = "",
+  fileName = "",
+  mimeType = "",
+  base64 = "",
+  maxBase64Length = MAX_AVATAR_BASE64_LENGTH,
+} = {}) => {
+  let imageBase64 = normalizeImageBase64(base64);
+  if (!imageBase64 && !uri) return "";
+
   try {
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FILESYSTEM_BASE64_ENCODING,
-    });
-    if (!base64 || base64.length > MAX_AVATAR_BASE64_LENGTH) return "";
-    const ext = getAvatarExtension(fileName) || getAvatarExtension(uri) || "jpg";
-    const mimeType = AVATAR_MIME_BY_EXT[ext] || "image/jpeg";
-    return `data:${mimeType};base64,${base64}`;
+    if (!imageBase64) {
+      imageBase64 = normalizeImageBase64(
+        await FileSystem.readAsStringAsync(uri, {
+          encoding: FILESYSTEM_BASE64_ENCODING,
+        })
+      );
+    }
+    if (!imageBase64 || imageBase64.length > maxBase64Length) return "";
+    return `data:${getImageMimeType(mimeType, fileName, uri)};base64,${imageBase64}`;
   } catch {
     return "";
   }
 };
+
+const buildAvatarDataUri = async (uri = "", fileName = "") =>
+  buildImageDataUri({ uri, fileName, maxBase64Length: MAX_AVATAR_BASE64_LENGTH });
+
+const buildPostCoverDataUri = async ({
+  uri = "",
+  fileName = "",
+  mimeType = "",
+  base64 = "",
+} = {}) =>
+  buildImageDataUri({
+    uri,
+    fileName,
+    mimeType,
+    base64,
+    maxBase64Length: MAX_POST_COVER_BASE64_LENGTH,
+  });
 
 const getAuthErrorMessage = (err) => {
   const code = err?.code || "";
@@ -1425,6 +1466,7 @@ export const AppProvider = ({ children }) => {
     const endDateTime = parsedEndDateTime.toISOString();
 
     if (data?.coverImageUri) {
+      let uploadError = null;
       try {
         coverImage = await uploadImageAsync({
           uri: data.coverImageUri,
@@ -1438,8 +1480,22 @@ export const AppProvider = ({ children }) => {
           throw new Error("Cover image upload did not produce a public URL.");
         }
       } catch (error) {
+        uploadError = error;
         console.warn("Cover image upload failed:", error?.message || error);
-        if (useFirebaseBackend) return false;
+      }
+
+      if (useFirebaseBackend && (!coverImage || !/^https?:\/\//i.test(String(coverImage)))) {
+        coverImage = await buildPostCoverDataUri({
+          uri: data.coverImageUri,
+          fileName: coverImageName,
+          mimeType: data.coverImageMimeType,
+          base64: data.coverImageBase64,
+        });
+
+        if (!coverImage) {
+          console.warn("Cover image Firestore fallback failed:", uploadError?.message || uploadError || "image too large");
+          return false;
+        }
       }
     }
 
@@ -1473,6 +1529,8 @@ export const AppProvider = ({ children }) => {
 
     delete payload.coverImageUri;
     delete payload.coverImageName;
+    delete payload.coverImageBase64;
+    delete payload.coverImageMimeType;
 
     if (useFirebaseBackend) {
       try {
