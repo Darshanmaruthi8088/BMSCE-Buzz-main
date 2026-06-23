@@ -18,6 +18,7 @@ const colorMap = {
   rose: "#EF4444",
   blue: "#3B82F6",
   purple: "#7C3AED",
+  cyan: "#0891B2",
 };
 
 const monthTitleFormatter = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
@@ -296,7 +297,7 @@ const EventsScreen = () => {
 
         {events.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <Text style={[styles.emptyText, { color: theme.text3 }]}>No events yet. Publish posts in events categories.</Text>
+            <Text style={[styles.emptyText, { color: theme.text3 }]}>No scheduled posts yet.</Text>
           </View>
         ) : null}
 

@@ -284,6 +284,7 @@ export const AppProvider = ({ children }) => {
   const repairedAvatarUrisRef = useRef(new Set());
   const repairedPostImageUrisRef = useRef(new Set());
   const expiryPurgeInFlightRef = useRef(false);
+  const manualAuthSessionRef = useRef(false);
   const newsRef = useRef(news);
 
   const isAdmin = isPrimaryAdminSession(user);
@@ -714,69 +715,34 @@ export const AppProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (!useFirebaseBackend || !auth || !db) {
+    if (!useFirebaseBackend || !auth) {
       return undefined;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let cancelled = false;
+    const clearRestoredSession = async () => {
+      if (manualAuthSessionRef.current) return;
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("Failed to clear restored auth session:", error);
+      }
+      if (!cancelled) setUser(null);
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (!firebaseUser) {
-        setUser(null);
+        if (!manualAuthSessionRef.current) setUser(null);
         return;
       }
 
-      try {
-        const userRef = doc(db, "users", firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          // Sign-up flow may create the Auth user before the Firestore profile write finishes.
-          return;
-        }
-
-        const stored = userSnap.data() || {};
-        const email = normalizeEmail(stored.email || firebaseUser.email || "");
-        if (!email) {
-          return;
-        }
-
-        const storedRole = normalizeRole(stored.role || "user", email);
-        const selectedRole = USERS[storedRole] || USERS.user;
-        const finalName = stored.name || deriveNameFromEmail(email) || selectedRole.name;
-
-        const profileData = {
-          role: storedRole,
-          userType: normalizeUserType(storedRole, stored.userType || "student"),
-          name: finalName,
-          email,
-          avatar: stored.avatar || getInitials(finalName),
-          avatarUrl: stored.avatarUrl || "",
-          dept: storedRole === "admin" ? PRIMARY_ADMIN.dept : stored.dept || selectedRole.dept,
-          year:
-            storedRole === "user"
-              ? typeof stored.year === "undefined"
-                ? selectedRole.year || null
-                : stored.year
-              : null,
-          usn:
-            storedRole === "user"
-              ? typeof stored.usn === "undefined"
-                ? selectedRole.usn || null
-                : stored.usn
-              : null,
-          readNotificationIds: normalizeReadNotificationIds(stored.readNotificationIds),
-          notificationCutoffAtMs:
-            normalizeNotificationCutoffMs(stored.notificationCutoffAtMs) || Date.now(),
-        };
-
-        onLogin({ uid: firebaseUser.uid, ...profileData });
-      } catch (error) {
-        console.error("Failed to restore auth session:", error);
-        setUser(null);
-      }
+      clearRestoredSession();
     });
 
-    return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Firebase auth restore runs once; onLogin/setUser are stable enough for session bootstrap.
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   const authenticate = async ({
@@ -882,6 +848,7 @@ export const AppProvider = ({ children }) => {
     };
 
     try {
+      manualAuthSessionRef.current = true;
       if (tab === "signup") {
         const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
         const selectedRole = USERS[requestedRole] || USERS.user;
@@ -926,6 +893,7 @@ export const AppProvider = ({ children }) => {
             credential = await createUserWithEmailAndPassword(auth, PRIMARY_ADMIN.email, PRIMARY_ADMIN.password);
           } catch (adminCreateError) {
             if (adminCreateError?.code === "auth/email-already-in-use") {
+              manualAuthSessionRef.current = false;
               return {
                 ok: false,
                 message:
@@ -1001,15 +969,18 @@ export const AppProvider = ({ children }) => {
       const stored = userSnap?.data?.() || {};
       if (normalizeEmail(stored.email || trimmedEmail) !== trimmedEmail) {
         await signOut(auth);
+        manualAuthSessionRef.current = false;
         return { ok: false, message: "Email does not match the registered profile." };
       }
       const storedRole = normalizeRole(stored.role || requestedRole, stored.email || trimmedEmail);
       if (storedRole !== requestedRole) {
         await signOut(auth);
+        manualAuthSessionRef.current = false;
         return { ok: false, message: `Role mismatch. This account is registered as ${ROLE_LABELS[storedRole]}.` };
       }
       if (trimmedName && stored.name && stored.name.trim().toLowerCase() !== trimmedName.toLowerCase()) {
         await signOut(auth);
+        manualAuthSessionRef.current = false;
         return { ok: false, message: "Name does not match the registered profile." };
       }
 
@@ -1063,6 +1034,15 @@ export const AppProvider = ({ children }) => {
       onLogin({ uid: credential.user.uid, ...profileData });
       return { ok: true, message: "" };
     } catch (error) {
+      manualAuthSessionRef.current = false;
+      if (auth?.currentUser) {
+        try {
+          await signOut(auth);
+        } catch (signOutError) {
+          console.error("Failed to clear auth after authentication error:", signOutError);
+        }
+      }
+      setUser(null);
       return { ok: false, message: getAuthErrorMessage(error) };
     }
   };
@@ -1142,6 +1122,7 @@ export const AppProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    manualAuthSessionRef.current = false;
     if (auth?.currentUser) {
       try {
         await signOut(auth);
@@ -1791,11 +1772,7 @@ export const AppProvider = ({ children }) => {
   const events = useMemo(
     () =>
       newsWithUser
-        .filter(
-          (item) =>
-            item.status === "published" &&
-            ["Cultural Events", "Sports", "Exams", "Academics"].includes(item.category)
-        )
+        .filter((item) => item.status === "published" && (item.startDateTime || item.date))
         .map((item) => ({
           item,
           start: toDateValue(item.startDateTime || item.date),
@@ -1827,7 +1804,13 @@ export const AppProvider = ({ children }) => {
                   ? "rose"
                   : item.category === "Cultural Events"
                     ? "purple"
-                    : "blue",
+                    : item.category === "Placements"
+                      ? "emerald"
+                      : item.category === "Clubs"
+                        ? "cyan"
+                        : item.category === "Urgent Notices"
+                          ? "rose"
+                          : "blue",
           };
         })
         .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime)),
