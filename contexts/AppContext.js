@@ -163,6 +163,31 @@ const formatEventTimeRange = (startIso, endIso) => {
   return `${formatDateTime(start)} - ${formatDateTime(end)}`;
 };
 
+const mapPersonalCalendarEvent = (id, data = {}) => {
+  const start = toDateValue(data.startDateTime || data.date) || new Date();
+  const parsedEnd = toDateValue(data.endDateTime);
+  const end = parsedEnd && parsedEnd > start ? parsedEnd : new Date(start.getTime() + 60 * 60 * 1000);
+  const startIso = start.toISOString();
+  const endIso = end.toISOString();
+
+  return {
+    id: `personal-${id}`,
+    sourceId: id,
+    personalEventId: id,
+    isPersonal: true,
+    date: startIso.slice(0, 10),
+    startDateTime: startIso,
+    endDateTime: endIso,
+    title: data.title || "Personal event",
+    time: formatEventTimeRange(startIso, endIso),
+    venue: data.location || "Personal",
+    location: data.location || "",
+    category: "Personal",
+    status: "personal",
+    color: "amber",
+  };
+};
+
 const normalizeReadNotificationIds = (value) =>
   value && typeof value === "object"
     ? Object.fromEntries(
@@ -279,6 +304,7 @@ export const AppProvider = ({ children }) => {
   const [news, setNews] = useState(LOCAL_NEWS);
   const [notifs, setNotifs] = useState(LOCAL_NOTIFS);
   const [users, setUsers] = useState([]);
+  const [personalEvents, setPersonalEvents] = useState([]);
   const viewedArticleLocksRef = useRef(new Set());
   const likedArticleLocksRef = useRef(new Set());
   const repairedAvatarUrisRef = useRef(new Set());
@@ -593,6 +619,28 @@ export const AppProvider = ({ children }) => {
       unsubscribeForeground();
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPersonalEvents([]);
+      return undefined;
+    }
+    if (!useFirebaseBackend || !db) return undefined;
+
+    const unsubscribe = onSnapshot(
+      collection(db, "users", user.id, "personalEvents"),
+      (snapshot) => {
+        const mappedEvents = snapshot.docs
+          .map((eventDoc) => mapPersonalCalendarEvent(eventDoc.id, eventDoc.data()))
+          .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime));
+        setPersonalEvents(mappedEvents);
+      },
+      (error) => {
+        console.error("Failed to read personal events:", error);
+      }
+    );
+    return () => unsubscribe();
+  }, [user?.id]);
 
   const createNotification = async ({
     title,
@@ -1701,6 +1749,54 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const createPersonalEvent = async ({ title = "", startDateTime = "", endDateTime = "", location = "" } = {}) => {
+    if (!user?.id) {
+      return { ok: false, message: "Sign in to create a personal event." };
+    }
+
+    const cleanTitle = title.trim();
+    const cleanLocation = location.trim();
+    const start = toDateValue(startDateTime);
+    const parsedEnd = toDateValue(endDateTime);
+    if (!cleanTitle) {
+      return { ok: false, message: "Enter an event name." };
+    }
+    if (!start) {
+      return { ok: false, message: "Choose a valid event time." };
+    }
+
+    const end = parsedEnd && parsedEnd > start ? parsedEnd : new Date(start.getTime() + 60 * 60 * 1000);
+    const payload = {
+      title: cleanTitle,
+      location: cleanLocation,
+      userId: user.id,
+      startDateTime: start.toISOString(),
+      endDateTime: end.toISOString(),
+    };
+
+    if (useFirebaseBackend && db) {
+      try {
+        await addDoc(collection(db, "users", user.id, "personalEvents"), {
+          ...payload,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        return { ok: true, message: "" };
+      } catch (error) {
+        console.error("Failed to create personal event:", error);
+        return { ok: false, message: "Could not save this event. Please try again." };
+      }
+    }
+
+    const localId = `local-${Date.now()}`;
+    setPersonalEvents((prev) =>
+      [...prev, mapPersonalCalendarEvent(localId, payload)].sort((a, b) =>
+        a.startDateTime.localeCompare(b.startDateTime)
+      )
+    );
+    return { ok: true, message: "" };
+  };
+
   const commentedPostIdsByUser = async (targetNews, targetUserId) => {
     if (!targetUserId || !Array.isArray(targetNews) || !targetNews.length) return {};
     if (!useFirebaseBackend) {
@@ -1770,8 +1866,8 @@ export const AppProvider = ({ children }) => {
   );
 
   const events = useMemo(
-    () =>
-      newsWithUser
+    () => {
+      const publicEvents = newsWithUser
         .filter((item) => item.status === "published" && (item.startDateTime || item.date))
         .map((item) => ({
           item,
@@ -1811,10 +1907,15 @@ export const AppProvider = ({ children }) => {
                         : item.category === "Urgent Notices"
                           ? "rose"
                           : "blue",
-          };
-        })
-        .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime)),
-    [newsWithUser, isAdmin, user?.id]
+            };
+          })
+        .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime));
+
+      return [...publicEvents, ...personalEvents].sort((a, b) =>
+        a.startDateTime.localeCompare(b.startDateTime)
+      );
+    },
+    [newsWithUser, personalEvents]
   );
 
   const value = {
@@ -1849,6 +1950,7 @@ export const AppProvider = ({ children }) => {
     updateAvatar,
     createNotification,
     createPublishedPostNotification,
+    createPersonalEvent,
     commentedPostIdsByUser,
   };
 

@@ -1,16 +1,21 @@
 import { useMemo, useState } from "react";
 import {
+  Alert,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../contexts/AppContext";
 import { getTheme } from "../services/theme";
 import { Badge } from "../components/Badge";
+import AppButton from "../components/AppButton";
 
 const colorMap = {
   amber: "#F59E0B",
@@ -23,6 +28,11 @@ const colorMap = {
 
 const monthTitleFormatter = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
 const monthShortFormatter = new Intl.DateTimeFormat(undefined, { month: "short" });
+const timeLabelFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+});
 const selectedDayLabelFormatter = new Intl.DateTimeFormat(undefined, {
   day: "2-digit",
   month: "short",
@@ -49,9 +59,28 @@ const dateKeyToDate = (value = "") => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const addHours = (value, hours = 1) => new Date(value.getTime() + hours * 60 * 60 * 1000);
+
+const createDefaultPersonalStart = (dateKey = "") => {
+  const selectedDate = dateKeyToDate(dateKey) || new Date();
+  const now = new Date();
+  const start = new Date(selectedDate);
+  if (toDateKey(start) === toDateKey(now)) {
+    start.setHours(now.getHours() + 1, 0, 0, 0);
+    return start;
+  }
+  start.setHours(9, 0, 0, 0);
+  return start;
+};
+
+const mergeTimeIntoDate = (baseDate, selectedTime) => {
+  const next = new Date(baseDate);
+  next.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+  return next;
+};
+
 const EventsScreen = () => {
-  const navigation = useNavigation();
-  const { dark, events } = useApp();
+  const { dark, events, createPersonalEvent } = useApp();
   const insets = useSafeAreaInsets();
   const theme = useMemo(() => getTheme(dark), [dark]);
 
@@ -61,6 +90,13 @@ const EventsScreen = () => {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKey(new Date()));
+  const [personalModalVisible, setPersonalModalVisible] = useState(false);
+  const [personalEventTitle, setPersonalEventTitle] = useState("");
+  const [personalEventLocation, setPersonalEventLocation] = useState("");
+  const [personalEventStart, setPersonalEventStart] = useState(() => createDefaultPersonalStart(toDateKey(new Date())));
+  const [personalEventEnd, setPersonalEventEnd] = useState(() => addHours(createDefaultPersonalStart(toDateKey(new Date()))));
+  const [personalTimePicker, setPersonalTimePicker] = useState({ visible: false, target: "start" });
+  const [savingPersonalEvent, setSavingPersonalEvent] = useState(false);
 
   const sortedEvents = useMemo(
     () =>
@@ -148,10 +184,62 @@ const EventsScreen = () => {
   };
 
   const openCreateEvent = () => {
-    navigation.navigate("Compose", {
-      initialDate: selectedDateKey,
-      presetCategory: "Cultural Events",
+    const start = createDefaultPersonalStart(selectedDateKey);
+    setPersonalEventTitle("");
+    setPersonalEventLocation("");
+    setPersonalEventStart(start);
+    setPersonalEventEnd(addHours(start));
+    setPersonalTimePicker({ visible: false, target: "start" });
+    setPersonalModalVisible(true);
+  };
+
+  const openPersonalTimePicker = (target) => {
+    setPersonalTimePicker({ visible: true, target });
+  };
+
+  const handlePersonalTimeChange = (event, selectedTime) => {
+    if (Platform.OS === "android") {
+      setPersonalTimePicker((prev) => ({ ...prev, visible: false }));
+    }
+    if (event?.type === "dismissed" || !selectedTime) return;
+
+    if (personalTimePicker.target === "start") {
+      const nextStart = mergeTimeIntoDate(personalEventStart, selectedTime);
+      setPersonalEventStart(nextStart);
+      if (personalEventEnd <= nextStart) {
+        setPersonalEventEnd(addHours(nextStart));
+      }
+    } else {
+      const nextEnd = mergeTimeIntoDate(personalEventEnd, selectedTime);
+      if (nextEnd <= personalEventStart) {
+        Alert.alert("Validation", "End time must be after start time.");
+        setPersonalEventEnd(addHours(personalEventStart));
+      } else {
+        setPersonalEventEnd(nextEnd);
+      }
+    }
+
+    if (Platform.OS !== "android") {
+      setPersonalTimePicker((prev) => ({ ...prev, visible: false }));
+    }
+  };
+
+  const savePersonalEvent = async () => {
+    setSavingPersonalEvent(true);
+    const result = await createPersonalEvent({
+      title: personalEventTitle,
+      location: personalEventLocation,
+      startDateTime: personalEventStart.toISOString(),
+      endDateTime: personalEventEnd.toISOString(),
     });
+    setSavingPersonalEvent(false);
+
+    if (!result.ok) {
+      Alert.alert("Create Event", result.message || "Could not create this event.");
+      return;
+    }
+
+    setPersonalModalVisible(false);
   };
 
   return (
@@ -252,6 +340,7 @@ const EventsScreen = () => {
                 ["#059669", "Sports"],
                 ["#EF4444", "Exams"],
                 ["#7C3AED", "Cultural"],
+                ["#F59E0B", "Personal"],
               ].map(([color, label]) => (
                 <View key={label} style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: color }]} />
@@ -284,7 +373,7 @@ const EventsScreen = () => {
                           {event.time} | {event.venue}
                         </Text>
                       </View>
-                      <Badge text={event.category} color={color} small />
+                      <Badge text={event.isPersonal ? "Personal" : event.category} color={color} small />
                     </View>
                   );
                 })
@@ -297,7 +386,7 @@ const EventsScreen = () => {
 
         {events.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <Text style={[styles.emptyText, { color: theme.text3 }]}>No scheduled posts yet.</Text>
+            <Text style={[styles.emptyText, { color: theme.text3 }]}>No scheduled posts or personal events yet.</Text>
           </View>
         ) : null}
 
@@ -317,13 +406,106 @@ const EventsScreen = () => {
               </View>
 
               <View style={styles.eventActions}>
-                <Badge text={event.category} color={color} small />
+                <Badge text={event.isPersonal ? "Personal" : event.category} color={color} small />
                 {event.status === "pending" ? <Badge text="Pending" color="#B45309" small /> : null}
               </View>
             </View>
           );
         })}
       </ScrollView>
+
+      <Modal
+        visible={personalModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPersonalModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Create Personal Event</Text>
+            <Text style={[styles.modalDate, { color: theme.text2 }]}>
+              {selectedDayLabelFormatter.format(personalEventStart)}
+            </Text>
+
+            <View>
+              <Text style={[styles.fieldLabel, { color: theme.text2 }]}>Event Name</Text>
+              <TextInput
+                value={personalEventTitle}
+                onChangeText={setPersonalEventTitle}
+                placeholder="Project review, lab reminder..."
+                placeholderTextColor={theme.text3}
+                style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.input }]}
+              />
+            </View>
+
+            <View>
+              <Text style={[styles.fieldLabel, { color: theme.text2 }]}>Place</Text>
+              <TextInput
+                value={personalEventLocation}
+                onChangeText={setPersonalEventLocation}
+                placeholder="Optional"
+                placeholderTextColor={theme.text3}
+                style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.input }]}
+              />
+            </View>
+
+            <View style={styles.timeRow}>
+              <View style={styles.timeCol}>
+                <Text style={[styles.fieldLabel, { color: theme.text2 }]}>Start Time</Text>
+                <Pressable
+                  onPress={() => openPersonalTimePicker("start")}
+                  style={[styles.timeButton, { borderColor: theme.border, backgroundColor: theme.input }]}
+                >
+                  <Text style={[styles.timeButtonText, { color: theme.text }]}>
+                    {timeLabelFormatter.format(personalEventStart)}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.timeCol}>
+                <Text style={[styles.fieldLabel, { color: theme.text2 }]}>End Time</Text>
+                <Pressable
+                  onPress={() => openPersonalTimePicker("end")}
+                  style={[styles.timeButton, { borderColor: theme.border, backgroundColor: theme.input }]}
+                >
+                  <Text style={[styles.timeButtonText, { color: theme.text }]}>
+                    {timeLabelFormatter.format(personalEventEnd)}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {personalTimePicker.visible ? (
+              <DateTimePicker
+                value={personalTimePicker.target === "start" ? personalEventStart : personalEventEnd}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                is24Hour={false}
+                onChange={handlePersonalTimeChange}
+              />
+            ) : null}
+
+            <View style={styles.modalActions}>
+              <AppButton
+                title="Cancel"
+                onPress={() => setPersonalModalVisible(false)}
+                outline
+                borderColor={theme.border}
+                color={theme.text}
+                style={{ flex: 1 }}
+              />
+              <AppButton
+                title={savingPersonalEvent ? "Saving..." : "Save"}
+                onPress={savePersonalEvent}
+                disabled={savingPersonalEvent}
+                background={theme.accent}
+                borderColor={theme.accent}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -566,6 +748,67 @@ const styles = StyleSheet.create({
   eventActions: {
     alignItems: "flex-end",
     gap: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.42)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  modalDate: {
+    marginTop: -8,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  fieldLabel: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  modalInput: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  timeRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  timeCol: {
+    flex: 1,
+  },
+  timeButton: {
+    minHeight: 44,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  timeButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  modalActions: {
+    marginTop: 4,
+    flexDirection: "row",
+    gap: 8,
   },
 });
 
