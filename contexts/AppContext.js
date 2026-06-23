@@ -89,6 +89,19 @@ const getDeleteUserAccountMessage = (error) => {
   }
   return "Could not delete this user's Firebase Auth account. Check Firebase Functions logs and try again.";
 };
+const isDeleteUserFunctionUnavailable = (error) => {
+  const code = String(error?.code || "").replace(/^functions\//, "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  if (["permission-denied", "unauthenticated", "invalid-argument", "failed-precondition"].includes(code)) {
+    return false;
+  }
+  return (
+    ["not-found", "unimplemented", "unavailable"].includes(code) ||
+    (message.includes("function") && message.includes("not found")) ||
+    message.includes("not deployed") ||
+    message.includes("unimplemented")
+  );
+};
 
 const AVATAR_CACHE_FILE =
   FileSystem.documentDirectory || FileSystem.cacheDirectory
@@ -1692,11 +1705,52 @@ export const AppProvider = ({ children }) => {
       return deleteUserResult(false, "The primary admin account cannot be deleted.");
     }
 
+    const deleteProfileFromFirestoreOnly = async () => {
+      try {
+        const batch = writeBatch(db);
+        batch.set(
+          doc(db, "deletedUsers", targetUserId),
+          {
+            userId: targetUserId,
+            email: targetProfile.email || "",
+            name: targetProfile.name || "User",
+            deletedBy: user?.id || "",
+            deletedAt: serverTimestamp(),
+            authDeleted: false,
+            authDeletePending: true,
+          },
+          { merge: true }
+        );
+        batch.delete(doc(db, "users", targetUserId));
+
+        const fcmTokensSnapshot = await getDocs(
+          query(collection(db, "fcmTokens"), where("userId", "==", targetUserId))
+        );
+        fcmTokensSnapshot.docs.forEach((tokenDoc) => {
+          batch.delete(tokenDoc.ref);
+        });
+
+        const personalEventsSnapshot = await getDocs(
+          collection(db, "users", targetUserId, "personalEvents")
+        );
+        personalEventsSnapshot.docs.forEach((eventDoc) => {
+          batch.delete(eventDoc.ref);
+        });
+
+        await batch.commit();
+        setUsers((prev) => prev.filter((item) => item.id !== targetUserId));
+        return deleteUserResult(
+          true,
+          "User profile deleted from Firestore only. Firebase Auth still has this email until Functions are deployed."
+        );
+      } catch (error) {
+        console.error("Failed to delete user profile:", error);
+        return deleteUserResult(false, "Could not delete this user's profile. Check Firestore rules and try again.");
+      }
+    };
+
     if (!firebaseFunctions) {
-      return deleteUserResult(
-        false,
-        "Firebase Functions are not configured. The user was not deleted from Firebase Auth."
-      );
+      return deleteProfileFromFirestoreOnly();
     }
 
     try {
@@ -1706,6 +1760,9 @@ export const AppProvider = ({ children }) => {
       return deleteUserResult(true);
     } catch (error) {
       console.error("Failed to delete user account:", error);
+      if (isDeleteUserFunctionUnavailable(error)) {
+        return deleteProfileFromFirestoreOnly();
+      }
       return deleteUserResult(false, getDeleteUserAccountMessage(error));
     }
   };
