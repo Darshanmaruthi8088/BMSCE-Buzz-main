@@ -4,6 +4,7 @@ import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFunctions } from "firebase/functions";
 import { getFirestore } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes, uploadString } from "firebase/storage";
 
@@ -71,6 +72,7 @@ const normalizeStorageBucketName = (value = "") => {
 let app = null;
 let auth = null;
 let db = null;
+let functions = null;
 let storage = null;
 let uploadStorageTargets = [];
 
@@ -78,6 +80,7 @@ if (isFirebaseConfigured) {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   auth = initAuthForCurrentPlatform(app);
   db = getFirestore(app);
+  functions = getFunctions(app);
   storage = getStorage(app);
 
   const configuredBucket = normalizeStorageBucketName(
@@ -112,7 +115,7 @@ if (isFirebaseConfigured) {
   }
 }
 
-export { app, auth, db, storage, firebaseConfig };
+export { app, auth, db, functions, storage, firebaseConfig };
 
 const getImageExtension = (value = "") => {
   const normalized = String(value || "").split("?")[0];

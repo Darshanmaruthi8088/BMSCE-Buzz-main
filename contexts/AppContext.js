@@ -23,9 +23,11 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import {
   auth,
   db,
+  functions as firebaseFunctions,
   isFirebaseConfigured,
   requestFcmToken,
   subscribeToForegroundMessages,
@@ -1539,11 +1541,21 @@ export const AppProvider = ({ children }) => {
 
   const deleteUserProfile = async (targetUserId) => {
     if (!targetUserId) return false;
+    if (targetUserId === user?.id) return false;
+    if (!useFirebaseBackend || !db) {
+      setUsers((prev) => prev.filter((item) => item.id !== targetUserId));
+      return true;
+    }
+    const targetProfile = users.find((item) => item.id === targetUserId);
+    if (normalizeEmail(targetProfile?.email || "") === PRIMARY_ADMIN_EMAIL) return false;
+    if (!firebaseFunctions) return false;
+
     try {
-      await deleteDoc(doc(db, "users", targetUserId));
+      const deleteUserAccount = httpsCallable(firebaseFunctions, "deleteUserAccount");
+      await deleteUserAccount({ userId: targetUserId });
       return true;
     } catch (error) {
-      console.error("Failed to delete user profile:", error);
+      console.error("Failed to delete user account:", error);
       return false;
     }
   };

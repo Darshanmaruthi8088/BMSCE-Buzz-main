@@ -128,8 +128,14 @@ const AdminScreen = ({ route }) => {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => {
-          deleteUserProfile(targetUser.id);
+        onPress: async () => {
+          const deleted = await deleteUserProfile(targetUser.id);
+          if (!deleted) {
+            Alert.alert(
+              "Delete User Failed",
+              "Could not delete this user's Firebase Auth account. Deploy the Firebase Function and try again."
+            );
+          }
         },
       },
     ]);
