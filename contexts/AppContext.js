@@ -221,6 +221,11 @@ const mapPersonalCalendarEvent = (id, data = {}) => {
   };
 };
 
+const isActiveCalendarEvent = (event, nowMs = Date.now()) => {
+  const end = toDateValue(event?.endDateTime || event?.date);
+  return !end || end.getTime() > nowMs;
+};
+
 const normalizeReadNotificationIds = (value) =>
   value && typeof value === "object"
     ? Object.fromEntries(
@@ -660,13 +665,28 @@ export const AppProvider = ({ children }) => {
     }
     if (!useFirebaseBackend || !db) return undefined;
 
+    const personalEventsRef = collection(db, "users", user.id, "personalEvents");
+    const deleteExpiredDocs = (eventDocs = [], nowMs = Date.now()) => {
+      const expiredDocs = eventDocs.filter((eventDoc) => {
+        const event = mapPersonalCalendarEvent(eventDoc.id, eventDoc.data());
+        return !isActiveCalendarEvent(event, nowMs);
+      });
+      if (!expiredDocs.length) return;
+      Promise.allSettled(expiredDocs.map((eventDoc) => deleteDoc(eventDoc.ref))).catch((error) => {
+        console.error("Failed to delete expired personal events:", error);
+      });
+    };
+
     const unsubscribe = onSnapshot(
-      collection(db, "users", user.id, "personalEvents"),
+      personalEventsRef,
       (snapshot) => {
+        const nowMs = Date.now();
         const mappedEvents = snapshot.docs
           .map((eventDoc) => mapPersonalCalendarEvent(eventDoc.id, eventDoc.data()))
+          .filter((event) => isActiveCalendarEvent(event, nowMs))
           .sort((a, b) => a.startDateTime.localeCompare(b.startDateTime));
         setPersonalEvents(mappedEvents);
+        deleteExpiredDocs(snapshot.docs, nowMs);
       },
       (error) => {
         if (isFirestorePermissionDeniedError(error)) {
@@ -676,7 +696,22 @@ export const AppProvider = ({ children }) => {
         console.error("Failed to read personal events:", error);
       }
     );
-    return () => unsubscribe();
+
+    const cleanupInterval = setInterval(async () => {
+      try {
+        const snapshot = await getDocs(personalEventsRef);
+        deleteExpiredDocs(snapshot.docs);
+      } catch (error) {
+        if (!isFirestorePermissionDeniedError(error)) {
+          console.error("Failed to check expired personal events:", error);
+        }
+      }
+    }, 60_000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(cleanupInterval);
+    };
   }, [user?.id]);
 
   const createNotification = async ({
@@ -1883,27 +1918,49 @@ export const AppProvider = ({ children }) => {
         });
         return { ok: true, message: "" };
       } catch (error) {
+        console.error("Failed to create personal event:", error);
         if (isFirestorePermissionDeniedError(error)) {
-          const localId = `local-${Date.now()}`;
-          setPersonalEvents((prev) =>
-            [...prev, mapPersonalCalendarEvent(localId, payload)].sort((a, b) =>
-              a.startDateTime.localeCompare(b.startDateTime)
-            )
-          );
           return {
-            ok: true,
-            message: "Saved on this device. Deploy Firestore rules to sync personal events.",
+            ok: false,
+            message: "Personal events could not sync. Sign out, sign back in, and try again.",
           };
         }
-        console.error("Failed to create personal event:", error);
         return { ok: false, message: "Could not save this event. Please try again." };
       }
     }
 
-    const localId = `local-${Date.now()}`;
+    return { ok: false, message: "Firebase is not configured. Personal events need backend sync." };
+  };
+
+  const deletePersonalEvent = async (personalEventId = "") => {
+    if (!user?.id) {
+      return { ok: false, message: "Sign in to delete a personal event." };
+    }
+
+    const cleanEventId = String(personalEventId || "").replace(/^personal-/, "").trim();
+    if (!cleanEventId) {
+      return { ok: false, message: "Select a personal event to delete." };
+    }
+
+    if (useFirebaseBackend && db && !cleanEventId.startsWith("local-")) {
+      try {
+        await deleteDoc(doc(db, "users", user.id, "personalEvents", cleanEventId));
+        return { ok: true, message: "" };
+      } catch (error) {
+        console.error("Failed to delete personal event:", error);
+        if (isFirestorePermissionDeniedError(error)) {
+          return { ok: false, message: "You can only delete your own personal events." };
+        }
+        return { ok: false, message: "Could not delete this event. Please try again." };
+      }
+    }
+
     setPersonalEvents((prev) =>
-      [...prev, mapPersonalCalendarEvent(localId, payload)].sort((a, b) =>
-        a.startDateTime.localeCompare(b.startDateTime)
+      prev.filter(
+        (event) =>
+          event.id !== personalEventId &&
+          event.sourceId !== cleanEventId &&
+          event.personalEventId !== cleanEventId
       )
     );
     return { ok: true, message: "" };
@@ -2063,6 +2120,7 @@ export const AppProvider = ({ children }) => {
     createNotification,
     createPublishedPostNotification,
     createPersonalEvent,
+    deletePersonalEvent,
     commentedPostIdsByUser,
   };
 

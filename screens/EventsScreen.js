@@ -79,8 +79,11 @@ const mergeTimeIntoDate = (baseDate, selectedTime) => {
   return next;
 };
 
+const getPersonalEventId = (event) =>
+  String(event?.personalEventId || event?.sourceId || event?.id || "").replace(/^personal-/, "");
+
 const EventsScreen = () => {
-  const { dark, events, createPersonalEvent } = useApp();
+  const { dark, events, createPersonalEvent, deletePersonalEvent } = useApp();
   const insets = useSafeAreaInsets();
   const theme = useMemo(() => getTheme(dark), [dark]);
 
@@ -97,6 +100,7 @@ const EventsScreen = () => {
   const [personalEventEnd, setPersonalEventEnd] = useState(() => addHours(createDefaultPersonalStart(toDateKey(new Date()))));
   const [personalTimePicker, setPersonalTimePicker] = useState({ visible: false, target: "start" });
   const [savingPersonalEvent, setSavingPersonalEvent] = useState(false);
+  const [deletingEventIds, setDeletingEventIds] = useState({});
 
   const sortedEvents = useMemo(
     () =>
@@ -245,6 +249,31 @@ const EventsScreen = () => {
     }
   };
 
+  const confirmDeletePersonalEvent = (event) => {
+    const eventId = getPersonalEventId(event);
+    if (!event?.isPersonal || !eventId) return;
+
+    Alert.alert("Delete Event", `Delete "${event.title}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          setDeletingEventIds((prev) => ({ ...prev, [eventId]: true }));
+          const result = await deletePersonalEvent(eventId);
+          setDeletingEventIds((prev) => {
+            const next = { ...prev };
+            delete next[eventId];
+            return next;
+          });
+          if (!result.ok) {
+            Alert.alert("Delete Event", result.message || "Could not delete this event.");
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
       <View
@@ -367,16 +396,31 @@ const EventsScreen = () => {
               ) : (
                 selectedDayEvents.map((event) => {
                   const color = colorMap[event.color] || theme.accent;
+                  const eventId = getPersonalEventId(event);
+                  const isDeleting = !!deletingEventIds[eventId];
                   return (
                     <View key={`${selectedDateKey}-${event.id}`} style={[styles.dayEventRow, { borderColor: theme.border }]}>
                       <View style={[styles.dayEventDot, { backgroundColor: color }]} />
-                      <View style={{ flex: 1 }}>
+                      <View style={styles.dayEventBody}>
                         <Text style={[styles.dayEventTitle, { color: theme.text }]}>{event.title}</Text>
                         <Text style={[styles.dayEventMeta, { color: theme.text2 }]}>
                           {event.time} | {event.venue}
                         </Text>
                       </View>
-                      <Badge text={event.isPersonal ? "Personal" : event.category} color={color} small />
+                      <View style={styles.dayEventActions}>
+                        <Badge text={event.isPersonal ? "Personal" : event.category} color={color} small />
+                        {event.isPersonal ? (
+                          <Pressable
+                            onPress={() => confirmDeletePersonalEvent(event)}
+                            disabled={isDeleting}
+                            style={[styles.deleteEventBtn, { borderColor: "#EF4444", opacity: isDeleting ? 0.6 : 1 }]}
+                          >
+                            <Text style={[styles.deleteEventText, { color: "#EF4444" }]}>
+                              {isDeleting ? "Deleting" : "Delete"}
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
                     </View>
                   );
                 })
@@ -396,6 +440,8 @@ const EventsScreen = () => {
         {sortedEvents.map((event) => {
           const startDate = toDateValue(event.startDateTime || event.date) || new Date();
           const color = colorMap[event.color] || theme.accent;
+          const eventId = getPersonalEventId(event);
+          const isDeleting = !!deletingEventIds[eventId];
           return (
             <View key={event.id} style={[styles.eventCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
               <View style={[styles.dateBox, { backgroundColor: `${color}22` }]}>
@@ -403,7 +449,7 @@ const EventsScreen = () => {
                 <Text style={[styles.dateMonth, { color }]}>{monthShortFormatter.format(startDate).toUpperCase()}</Text>
               </View>
 
-              <View style={{ flex: 1 }}>
+              <View style={styles.eventBody}>
                 <Text style={[styles.eventTitle, { color: theme.text }]}>{event.title}</Text>
                 <Text style={[styles.eventSub, { color: theme.text2 }]}>Time: {event.time} | Venue: {event.venue}</Text>
               </View>
@@ -411,6 +457,17 @@ const EventsScreen = () => {
               <View style={styles.eventActions}>
                 <Badge text={event.isPersonal ? "Personal" : event.category} color={color} small />
                 {event.status === "pending" ? <Badge text="Pending" color="#B45309" small /> : null}
+                {event.isPersonal ? (
+                  <Pressable
+                    onPress={() => confirmDeletePersonalEvent(event)}
+                    disabled={isDeleting}
+                    style={[styles.deleteEventBtn, { borderColor: "#EF4444", opacity: isDeleting ? 0.6 : 1 }]}
+                  >
+                    <Text style={[styles.deleteEventText, { color: "#EF4444" }]}>
+                      {isDeleting ? "Deleting" : "Delete"}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             </View>
           );
@@ -687,6 +744,14 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+  dayEventBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  dayEventActions: {
+    alignItems: "flex-end",
+    gap: 5,
+  },
   dayEventTitle: {
     fontSize: 11.5,
     fontWeight: "800",
@@ -738,6 +803,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
   },
+  eventBody: {
+    flex: 1,
+    minWidth: 0,
+  },
   eventTitle: {
     fontSize: 13,
     fontWeight: "800",
@@ -751,6 +820,19 @@ const styles = StyleSheet.create({
   eventActions: {
     alignItems: "flex-end",
     gap: 5,
+    flexShrink: 0,
+  },
+  deleteEventBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    minWidth: 58,
+    alignItems: "center",
+  },
+  deleteEventText: {
+    fontSize: 10,
+    fontWeight: "800",
   },
   modalOverlay: {
     flex: 1,
