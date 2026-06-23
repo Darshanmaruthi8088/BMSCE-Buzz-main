@@ -35,33 +35,56 @@ exports.deleteUserAccount = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "The primary admin account cannot delete itself.");
   }
 
-  const userRef = admin.firestore().collection("users").doc(userId);
+  const firestore = admin.firestore();
+  const userRef = firestore.collection("users").doc(userId);
   const userSnap = await userRef.get();
   const userData = userSnap.exists ? userSnap.data() || {} : {};
-  const targetEmail = normalizeEmail(userData.email || "");
+  let authUser = null;
+  try {
+    authUser = await admin.auth().getUser(userId);
+  } catch (error) {
+    if (error?.code !== "auth/user-not-found") throw error;
+  }
+  const targetEmail = normalizeEmail(userData.email || authUser?.email || "");
 
   if (targetEmail === PRIMARY_ADMIN_EMAIL || userData.role === "admin") {
     throw new HttpsError("permission-denied", "Admin accounts cannot be deleted from this screen.");
   }
 
-  await deleteAuthUser(userId);
+  const fcmTokensSnap = await firestore.collection("fcmTokens").where("userId", "==", userId).get();
+  const personalEventsSnap = await userRef.collection("personalEvents").get();
+  const authDeleted = await deleteAuthUser(userId);
 
-  const batch = admin.firestore().batch();
-  let hasFirestoreDeletes = false;
-  if (userSnap.exists) {
-    batch.delete(userRef);
-    hasFirestoreDeletes = true;
-  }
-
-  const fcmTokensSnap = await admin.firestore().collection("fcmTokens").where("userId", "==", userId).get();
+  const batch = firestore.batch();
+  batch.set(
+    firestore.collection("deletedUsers").doc(userId),
+    {
+      userId,
+      email: targetEmail,
+      name: userData.name || authUser?.displayName || "User",
+      role: userData.role || "user",
+      userType: userData.userType || null,
+      dept: userData.dept || "",
+      year: userData.year || null,
+      usn: userData.usn || null,
+      deletedBy: request.auth.uid,
+      deletedByEmail: normalizeEmail(request.auth.token?.email || ""),
+      deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      authDeleted,
+    },
+    { merge: true }
+  );
+  personalEventsSnap.docs.forEach((eventDoc) => {
+    batch.delete(eventDoc.ref);
+  });
   fcmTokensSnap.docs.forEach((tokenDoc) => {
     batch.delete(tokenDoc.ref);
-    hasFirestoreDeletes = true;
   });
-
-  if (hasFirestoreDeletes) {
-    await batch.commit();
+  if (userSnap.exists) {
+    batch.delete(userRef);
   }
 
-  return { ok: true };
+  await batch.commit();
+
+  return { ok: true, authDeleted };
 });
