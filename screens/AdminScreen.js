@@ -330,12 +330,14 @@ const AdminScreen = ({ route }) => {
                     <Text style={[styles.userActionText, { color: theme.accent }]}>Posts</Text>
                   </Pressable>
 
-                  <Pressable
-                    onPress={() => navigation.navigate("UserEdit", { userId: item.id })}
-                    style={[styles.userActionBtn, { borderColor: theme.border }]}
-                  >
-                    <Text style={[styles.userActionText, { color: theme.text2 }]}>Edit</Text>
-                  </Pressable>
+                  {item.role !== "admin" ? (
+                    <Pressable
+                      onPress={() => navigation.navigate("UserEdit", { userId: item.id })}
+                      style={[styles.userActionBtn, { borderColor: theme.border }]}
+                    >
+                      <Text style={[styles.userActionText, { color: theme.text2 }]}>Edit</Text>
+                    </Pressable>
+                  ) : null}
 
                   {item.id !== user?.id ? (
                     <Pressable

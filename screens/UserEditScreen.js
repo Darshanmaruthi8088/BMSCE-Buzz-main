@@ -64,7 +64,7 @@ const UserEditScreen = () => {
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
-    if (!targetUser || !form.name.trim()) return;
+    if (!targetUser || isPrimaryAdminUser || !form.name.trim()) return;
     setSaving(true);
     const ok = await saveUserEdits({
       ...targetUser,
@@ -85,6 +85,17 @@ const UserEditScreen = () => {
       <View style={[styles.emptyContainer, { backgroundColor: theme.bg }]}> 
         <Text style={[styles.emptyText, { color: theme.text2 }]}>User not found.</Text>
         <Pressable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: theme.accent }]}> 
+          <Text style={styles.backBtnText}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (isPrimaryAdminUser) {
+    return (
+      <View style={[styles.emptyContainer, { backgroundColor: theme.bg }]}>
+        <Text style={[styles.emptyText, { color: theme.text2 }]}>Admin profile editing is disabled.</Text>
+        <Pressable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: theme.accent }]}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </Pressable>
       </View>

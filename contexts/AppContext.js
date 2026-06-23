@@ -955,10 +955,37 @@ export const AppProvider = ({ children }) => {
       }
     };
 
+    const cleanupDeletedAuthAccountForSignup = async () => {
+      if (!firebaseFunctions) return false;
+      try {
+        const cleanupDeletedUserAuthForSignup = httpsCallable(
+          firebaseFunctions,
+          "cleanupDeletedUserAuthForSignup"
+        );
+        const result = await cleanupDeletedUserAuthForSignup({ email: trimmedEmail });
+        return !!result?.data?.authDeleted;
+      } catch (error) {
+        console.warn("Deleted account Auth cleanup failed:", error);
+        return false;
+      }
+    };
+
     try {
       manualAuthSessionRef.current = true;
       if (tab === "signup") {
-        const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+        let credential;
+        try {
+          credential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+        } catch (signupError) {
+          if (signupError?.code !== "auth/email-already-in-use") {
+            throw signupError;
+          }
+          const cleanedUpDeletedAuth = await cleanupDeletedAuthAccountForSignup();
+          if (!cleanedUpDeletedAuth) {
+            throw signupError;
+          }
+          credential = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+        }
         const selectedRole = USERS[requestedRole] || USERS.user;
         const profileData = {
           name: resolvedName,
@@ -1565,7 +1592,16 @@ export const AppProvider = ({ children }) => {
 
   const saveUserEdits = async (targetUser) => {
     if (!targetUser?.id) return false;
+    const existingTargetUser = users.find((item) => item.id === targetUser.id) || {};
     const targetEmail = normalizeEmail(targetUser.email || "");
+    const existingTargetEmail = normalizeEmail(existingTargetUser.email || "");
+    if (
+      targetUser.role === "admin" ||
+      targetEmail === PRIMARY_ADMIN_EMAIL ||
+      existingTargetEmail === PRIMARY_ADMIN_EMAIL
+    ) {
+      return false;
+    }
     const requestedRole = targetUser.role === "admin" ? "admin" : "user";
     const roleToPersist =
       requestedRole === "admin" && targetEmail === PRIMARY_ADMIN_EMAIL ? "admin" : "user";

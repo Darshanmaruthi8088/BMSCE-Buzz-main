@@ -177,7 +177,7 @@ const SearchScreen = () => {
           <Pressable
             key={item.id}
             onPress={() => {
-              if (isAdmin) navigation.navigate("UserEdit", { userId: item.id });
+              if (isAdmin && item.role !== "admin") navigation.navigate("UserEdit", { userId: item.id });
             }}
             style={[styles.userCard, { backgroundColor: theme.card, borderColor: theme.border }]}
           >

@@ -24,6 +24,15 @@ const deleteAuthUser = async (userId) => {
   }
 };
 
+const getAuthUserByEmail = async (email) => {
+  try {
+    return await admin.auth().getUserByEmail(email);
+  } catch (error) {
+    if (error?.code === "auth/user-not-found") return null;
+    throw error;
+  }
+};
+
 exports.deleteUserAccount = onCall(async (request) => {
   assertPrimaryAdmin(request);
 
@@ -84,6 +93,65 @@ exports.deleteUserAccount = onCall(async (request) => {
     batch.delete(userRef);
   }
 
+  await batch.commit();
+
+  return { ok: true, authDeleted };
+});
+
+exports.cleanupDeletedUserAuthForSignup = onCall(async (request) => {
+  const email = normalizeEmail(request.data?.email || "");
+  if (!email || !email.includes("@")) {
+    throw new HttpsError("invalid-argument", "A valid email is required.");
+  }
+  if (email === PRIMARY_ADMIN_EMAIL) {
+    throw new HttpsError("permission-denied", "The primary admin account cannot be cleaned up.");
+  }
+
+  const firestore = admin.firestore();
+  const authUser = await getAuthUserByEmail(email);
+  if (!authUser) {
+    return { ok: true, authDeleted: false };
+  }
+
+  const userRef = firestore.collection("users").doc(authUser.uid);
+  const [activeUserSnap, deletedUserSnap, activeEmailSnap] = await Promise.all([
+    userRef.get(),
+    firestore.collection("deletedUsers").doc(authUser.uid).get(),
+    firestore.collection("users").where("email", "==", email).limit(1).get(),
+  ]);
+
+  if (activeUserSnap.exists || !activeEmailSnap.empty) {
+    throw new HttpsError("failed-precondition", "This email belongs to an active user.");
+  }
+
+  let deletedMarkers = deletedUserSnap.exists ? [deletedUserSnap] : [];
+  if (!deletedMarkers.length) {
+    const deletedEmailSnap = await firestore
+      .collection("deletedUsers")
+      .where("email", "==", email)
+      .limit(10)
+      .get();
+    deletedMarkers = deletedEmailSnap.docs;
+  }
+
+  if (!deletedMarkers.length) {
+    throw new HttpsError("failed-precondition", "This email is not marked as deleted.");
+  }
+
+  const authDeleted = await deleteAuthUser(authUser.uid);
+  const batch = firestore.batch();
+  const cleanupPatch = {
+    userId: authUser.uid,
+    email,
+    authDeleted,
+    authCleanupAt: admin.firestore.FieldValue.serverTimestamp(),
+    authCleanupReason: "signup-email-reuse",
+  };
+
+  batch.set(firestore.collection("deletedUsers").doc(authUser.uid), cleanupPatch, { merge: true });
+  deletedMarkers.forEach((marker) => {
+    batch.set(marker.ref, cleanupPatch, { merge: true });
+  });
   await batch.commit();
 
   return { ok: true, authDeleted };
