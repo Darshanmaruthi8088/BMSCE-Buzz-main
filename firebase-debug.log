@@ -255,3 +255,104 @@
 [info] 
 [info] Project Console: https://console.firebase.google.com/project/bmsce-buzz-c461b/overview
 [info] Hosting URL: https://bmsce-buzz-c461b.web.app
+[debug] [2026-06-23T09:57:25.614Z] ----------------------------------------------------------------------
+[debug] [2026-06-23T09:57:25.621Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\dd708\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only functions
+[debug] [2026-06-23T09:57:25.622Z] CLI Version:   15.10.1
+[debug] [2026-06-23T09:57:25.622Z] Platform:      win32
+[debug] [2026-06-23T09:57:25.622Z] Node Version:  v25.1.0
+[debug] [2026-06-23T09:57:25.622Z] Time:          Tue Jun 23 2026 15:27:25 GMT+0530 (India Standard Time)
+[debug] [2026-06-23T09:57:25.623Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-23T09:57:25.629Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-23T09:57:37.292Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-23T09:57:37.293Z] > authorizing via signed-in user (dd7085646@gmail.com)
+[debug] [2026-06-23T09:57:37.293Z] [iam] checking project bmsce-buzz-c461b for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2026-06-23T09:57:37.296Z] Checked if tokens are valid: false, expires at: 1779725763854
+[debug] [2026-06-23T09:57:37.297Z] Checked if tokens are valid: false, expires at: 1779725763854
+[debug] [2026-06-23T09:57:37.298Z] > refreshing access token with scopes: []
+[debug] [2026-06-23T09:57:37.301Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-23T09:57:37.301Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-23T09:57:37.647Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-06-23T09:57:37.647Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-23T09:57:37.676Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions [none]
+[debug] [2026-06-23T09:57:37.676Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:37.677Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-06-23T09:57:38.030Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-06-23T09:57:38.030Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-06-23T09:57:38.657Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions 200
+[debug] [2026-06-23T09:57:38.657Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2026-06-23T09:57:38.658Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:38.658Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:38.658Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/bmsce-buzz-c461b/serviceAccounts/bmsce-buzz-c461b@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-06-23T09:57:38.658Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/bmsce-buzz-c461b/serviceAccounts/bmsce-buzz-c461b@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-06-23T09:57:40.382Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/bmsce-buzz-c461b/serviceAccounts/bmsce-buzz-c461b@appspot.gserviceaccount.com:testIamPermissions 404
+[debug] [2026-06-23T09:57:40.382Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/bmsce-buzz-c461b/serviceAccounts/bmsce-buzz-c461b@appspot.gserviceaccount.com:testIamPermissions {"error":{"code":404,"message":"Unknown service account","status":"NOT_FOUND"}}
+[debug] [2026-06-23T09:57:40.383Z] [functions] service account IAM check errored, deploy may fail: Request to https://iam.googleapis.com/v1/projects/bmsce-buzz-c461b/serviceAccounts/bmsce-buzz-c461b@appspot.gserviceaccount.com:testIamPermissions had HTTP Error: 404, Unknown service account {"name":"FirebaseError","children":[],"context":{"body":{"error":{"code":404,"message":"Unknown service account","status":"NOT_FOUND"}},"response":{"statusCode":404}},"exit":1,"message":"Request to https://iam.googleapis.com/v1/projects/bmsce-buzz-c461b/serviceAccounts/bmsce-buzz-c461b@appspot.gserviceaccount.com:testIamPermissions had HTTP Error: 404, Unknown service account","status":404}
+[info] 
+[info] === Deploying to 'bmsce-buzz-c461b'...
+[info] 
+[info] i  deploying functions 
+[debug] [2026-06-23T09:57:40.390Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:40.391Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:40.391Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudresourcemanager.googleapis.com [none]
+[debug] [2026-06-23T09:57:40.391Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudresourcemanager.googleapis.com  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:42.275Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudresourcemanager.googleapis.com 200
+[debug] [2026-06-23T09:57:42.276Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudresourcemanager.googleapis.com [omitted]
+[debug] [2026-06-23T09:57:42.291Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.291Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.291Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b [none]
+[debug] [2026-06-23T09:57:42.615Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b 200
+[debug] [2026-06-23T09:57:42.616Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/bmsce-buzz-c461b {"projectNumber":"676978260503","projectId":"bmsce-buzz-c461b","lifecycleState":"ACTIVE","name":"BMSCE-Buzz","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-03-17T12:29:56.712Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[debug] [2026-06-23T09:57:42.619Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.620Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.621Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.622Z] Checked if tokens are valid: true, expires at: 1782212256648
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2026-06-23T09:57:42.624Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.624Z] Checked if tokens are valid: true, expires at: 1782212256648
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-06-23T09:57:42.626Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.626Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:42.627Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com [none]
+[debug] [2026-06-23T09:57:42.627Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:42.628Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/runtimeconfig.googleapis.com [none]
+[debug] [2026-06-23T09:57:42.629Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/runtimeconfig.googleapis.com  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:42.633Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com [none]
+[debug] [2026-06-23T09:57:42.633Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:42.637Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com [none]
+[debug] [2026-06-23T09:57:42.637Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:43.084Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com 200
+[debug] [2026-06-23T09:57:43.085Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com [omitted]
+[warn] !  functions: missing required API cloudfunctions.googleapis.com. Enabling now... 
+[debug] [2026-06-23T09:57:43.086Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:43.086Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:43.086Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com:enable [none]
+[debug] [2026-06-23T09:57:43.087Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com:enable  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:44.442Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com:enable 200
+[debug] [2026-06-23T09:57:44.442Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudfunctions.googleapis.com:enable [omitted]
+[debug] [2026-06-23T09:57:44.489Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com 200
+[debug] [2026-06-23T09:57:44.490Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com [omitted]
+[warn] !  functions: missing required API cloudbuild.googleapis.com. Enabling now... 
+[debug] [2026-06-23T09:57:44.490Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:44.490Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:44.490Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com:enable [none]
+[debug] [2026-06-23T09:57:44.491Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com:enable  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:44.494Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/runtimeconfig.googleapis.com 200
+[debug] [2026-06-23T09:57:44.495Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2026-06-23T09:57:44.511Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com 200
+[debug] [2026-06-23T09:57:44.512Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com [omitted]
+[warn] !  artifactregistry: missing required API artifactregistry.googleapis.com. Enabling now... 
+[debug] [2026-06-23T09:57:44.512Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:44.513Z] Checked if tokens are valid: true, expires at: 1782212256648
+[debug] [2026-06-23T09:57:44.513Z] >>> [apiv2][query] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com:enable [none]
+[debug] [2026-06-23T09:57:44.513Z] >>> [apiv2][(partial)header] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com:enable  x-goog-user-project=bmsce-buzz-c461b
+[debug] [2026-06-23T09:57:44.888Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com:enable 400
+[debug] [2026-06-23T09:57:44.889Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/artifactregistry.googleapis.com:enable [omitted]
+[debug] [2026-06-23T09:57:44.915Z] <<< [apiv2][status] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com:enable 400
+[debug] [2026-06-23T09:57:44.915Z] <<< [apiv2][body] POST https://serviceusage.googleapis.com/v1/projects/bmsce-buzz-c461b/services/cloudbuild.googleapis.com:enable [omitted]
+[error] 
+[error] Error: Your project bmsce-buzz-c461b must be on the Blaze (pay-as-you-go) plan to complete this command. Required API artifactregistry.googleapis.com can't be enabled until the upgrade is complete. To upgrade, visit the following URL:
+
+https://console.firebase.google.com/project/bmsce-buzz-c461b/usage/details
