@@ -129,11 +129,13 @@ const AdminScreen = ({ route }) => {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          const deleted = await deleteUserProfile(targetUser.id);
+          const deleteResult = await deleteUserProfile(targetUser.id);
+          const deleted = typeof deleteResult === "boolean" ? deleteResult : !!deleteResult?.ok;
           if (!deleted) {
             Alert.alert(
               "Delete User Failed",
-              "Could not delete this user's Firebase Auth account. Deploy the Firebase Function and try again."
+              deleteResult?.message ||
+                "Could not delete this user's Firebase Auth account. Deploy the Firebase Function and try again."
             );
           }
         },

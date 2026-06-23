@@ -68,6 +68,26 @@ const normalizeUserType = (role, userType = "student") =>
   role === "user" ? (userType === "faculty" ? "faculty" : "student") : null;
 const isPrimaryAdminSession = (profile) =>
   normalizeRole(profile?.role, profile?.email) === "admin";
+const deleteUserResult = (ok, message = "") => ({ ok, message });
+const getDeleteUserAccountMessage = (error) => {
+  const code = String(error?.code || "").replace(/^functions\//, "");
+  if (code === "not-found" || code === "unimplemented") {
+    return "The deleteUserAccount Firebase Function is not deployed for this project. Deploy Functions and try again.";
+  }
+  if (code === "permission-denied") {
+    return "Only the primary admin can delete users.";
+  }
+  if (code === "unauthenticated") {
+    return "Sign in again as the primary admin, then try deleting this user.";
+  }
+  if (code === "invalid-argument") {
+    return "This user profile is missing a valid Firebase Auth ID.";
+  }
+  if (code === "failed-precondition") {
+    return "The primary admin account cannot delete itself.";
+  }
+  return "Could not delete this user's Firebase Auth account. Check Firebase Functions logs and try again.";
+};
 
 const AVATAR_CACHE_FILE =
   FileSystem.documentDirectory || FileSystem.cacheDirectory
@@ -1573,23 +1593,32 @@ export const AppProvider = ({ children }) => {
   };
 
   const deleteUserProfile = async (targetUserId) => {
-    if (!targetUserId) return false;
-    if (targetUserId === user?.id) return false;
+    if (!targetUserId) return deleteUserResult(false, "Select a user to delete.");
+    if (targetUserId === user?.id) {
+      return deleteUserResult(false, "You cannot delete your own admin account.");
+    }
     if (!useFirebaseBackend || !db) {
       setUsers((prev) => prev.filter((item) => item.id !== targetUserId));
-      return true;
+      return deleteUserResult(true);
     }
     const targetProfile = users.find((item) => item.id === targetUserId);
-    if (normalizeEmail(targetProfile?.email || "") === PRIMARY_ADMIN_EMAIL) return false;
-    if (!firebaseFunctions) return false;
+    if (!targetProfile) {
+      return deleteUserResult(false, "This user profile was not found. Refresh and try again.");
+    }
+    if (normalizeEmail(targetProfile?.email || "") === PRIMARY_ADMIN_EMAIL) {
+      return deleteUserResult(false, "The primary admin account cannot be deleted.");
+    }
+    if (!firebaseFunctions) {
+      return deleteUserResult(false, "Firebase Functions is not configured for this app build.");
+    }
 
     try {
       const deleteUserAccount = httpsCallable(firebaseFunctions, "deleteUserAccount");
       await deleteUserAccount({ userId: targetUserId });
-      return true;
+      return deleteUserResult(true);
     } catch (error) {
       console.error("Failed to delete user account:", error);
-      return false;
+      return deleteUserResult(false, getDeleteUserAccountMessage(error));
     }
   };
 
