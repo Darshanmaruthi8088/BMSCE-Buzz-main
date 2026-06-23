@@ -1430,17 +1430,16 @@ export const AppProvider = ({ children }) => {
           uri: data.coverImageUri,
           pathPrefix: `posts/${user.id}`,
           fileName: coverImageName,
-          allowLocalFallback: true, // Always allow local fallback for uploader's view
-          throwOnFailure: false, // Don't crash the whole post if Storage is unavailable
+          allowLocalFallback: !useFirebaseBackend,
+          throwOnFailure: useFirebaseBackend,
         });
-        
-        // If it's a local URI and we are using Firebase, warn that it's local only
+
         if (useFirebaseBackend && coverImage && !/^https?:\/\//i.test(String(coverImage))) {
-          console.warn("Storage unavailable: Image will only be visible on this device.");
+          throw new Error("Cover image upload did not produce a public URL.");
         }
       } catch (error) {
-        console.error("Cover image upload skipped:", error);
-        // We continue anyway so the post isn't lost
+        console.error("Cover image upload failed:", error);
+        if (useFirebaseBackend) return false;
       }
     }
 

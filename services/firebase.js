@@ -195,6 +195,27 @@ const blobToBase64 = (blob) =>
     reader.readAsDataURL(blob);
   });
 
+const readUriAsBase64 = async (uri) => {
+  try {
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FILESYSTEM_BASE64_ENCODING,
+    });
+    const cleanBase64 =
+      typeof base64 === "string" && base64.includes(",") ? base64.split(",").pop() : base64;
+    if (cleanBase64) return cleanBase64;
+  } catch {
+    // Fall through to blob conversion for non-file URI schemes.
+  }
+
+  let blob = null;
+  try {
+    blob = await getBlobFromUri(uri);
+    return await blobToBase64(blob);
+  } finally {
+    if (typeof blob?.close === "function") blob.close();
+  }
+};
+
 const persistLocalImageUri = async (uri, sourceName = "") => {
   if (!uri || !isLikelyLocalMediaUri(uri)) return uri || "";
   const baseDir = getLocalMediaBaseDir();
@@ -292,9 +313,19 @@ export const uploadImageAsync = async ({
         if (typeof blob?.close === "function") blob.close();
       }
       return await getDownloadURL(storageRef);
-      } catch (error) {
-        lastError = error;
-        try {
+    } catch (error) {
+      lastError = error;
+
+      try {
+        const contentType = getContentType(ext, "");
+        const base64 = await readUriAsBase64(sourceUri);
+        await uploadString(storageRef, base64, "base64", { contentType });
+        return await getDownloadURL(storageRef);
+      } catch (base64Error) {
+        lastError = base64Error || error;
+      }
+
+      try {
           const contentType = getContentType(ext, "");
           const idToken = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
           const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${target.bucket}/o?name=${encodeURIComponent(objectPath)}`;
